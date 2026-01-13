@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="5.6308284in"
+   height="3.665381in"
+   viewBox="0 0 143.02304 93.100676"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="motor_triangle1.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.0171317"
+     inkscape:cx="224.65135"
+     inkscape:cy="235.95765"
+     inkscape:window-width="956"
+     inkscape:window-height="1036"
+     inkscape:window-x="960"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-36.7227,-105.20949)">
+    <path
+       sodipodi:type="star"
+       style="fill:none;fill-opacity:0.726499;stroke:#000000;stroke-width:0.5;stroke-dasharray:none;stroke-opacity:1"
+       id="path290"
+       inkscape:flatsided="true"
+       sodipodi:sides="3"
+       sodipodi:cx="139.21815"
+       sodipodi:cy="104.01744"
+       sodipodi:r1="48.745781"
+       sodipodi:r2="24.37289"
+       sodipodi:arg1="0.52359878"
+       sodipodi:arg2="1.5707963"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 181.43324,128.39033 -84.43017,0 42.21509,-73.11867 z"
+       inkscape:transform-center-x="1.7539295e-06"
+       inkscape:transform-center-y="-12.186446"
+       transform="translate(-35.762269,61.43658)" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.499999;stroke-dasharray:none;stroke-opacity:1"
+       x="103.63383"
+       y="159.95097"
+       id="text1008"><tspan
+         sodipodi:role="line"
+         id="tspan1006"
+         style="text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.5"
+         x="103.63383"
+         y="159.95097">Neutral </tspan><tspan
+         sodipodi:role="line"
+         style="text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.5"
+         x="103.63383"
+         y="165.24263"
+         id="tspan1112">Equal length</tspan><tspan
+         sodipodi:role="line"
+         style="text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.5"
+         x="103.63383"
+         y="170.5343"
+         id="tspan1114">Equal force</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.499999;stroke-dasharray:none;stroke-opacity:1"
+       x="104.56744"
+       y="108.42682"
+       id="text1844"><tspan
+         sodipodi:role="line"
+         id="tspan1842"
+         style="text-align:center;text-anchor:middle;stroke-width:0.5"
+         x="104.56744"
+         y="108.42682">Max cable 1</tspan><tspan
+         sodipodi:role="line"
+         style="text-align:center;text-anchor:middle;stroke-width:0.5"
+         x="104.56744"
+         y="113.71848"
+         id="tspan1846">(towards palm)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.499999;stroke-dasharray:none;stroke-opacity:1"
+       x="164.09723"
+       y="191.6422"
+       id="text1850"><tspan
+         sodipodi:role="line"
+         id="tspan1848"
+         style="text-align:center;text-anchor:middle;stroke-width:0.5"
+         x="164.09723"
+         y="191.6422">Max cable 2</tspan><tspan
+         sodipodi:role="line"
+         style="text-align:center;text-anchor:middle;stroke-width:0.5"
+         x="164.09723"
+         y="196.93385"
+         id="tspan7019">Up towards arm</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:0.726499;stroke:none;stroke-width:0.499999;stroke-dasharray:none;stroke-opacity:1"
+       x="55.258331"
+       y="192.0025"
+       id="text1854"><tspan
+         sodipodi:role="line"
+         id="tspan1852"
+         style="text-align:center;text-anchor:middle;stroke-width:0.5"
+         x="55.258331"
+         y="192.0025">Max cable 3</tspan><tspan
+         sodipodi:role="line"
+         style="text-align:center;text-anchor:middle;stroke-width:0.5"
+         x="55.258331"
+         y="197.29416"
+         id="tspan7017">Up towards fingers</tspan></text>
+  </g>
+</svg>
