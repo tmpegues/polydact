@@ -1,0 +1,4 @@
+* Control glove:
+    * Glove: https://www.amazon.com/Franklin-Sports-20965F4-Shok-Sorb-Batting/dp/B07GJQBRMX?crid=85LULNA6PJMJ&dib=eyJ2IjoiMSJ9.gJsPFJxkzODRawSKXGg_aelqh1DWAMwyYst4YDgRdRSkXwiS6QbXhkkdymDPHDE7u1t8oDKRk3yygPERyY0qJ8ma1guf3MoShpWY9b0Veppaa9pLp7CVRs6VzZ73FjnpVdVMT2pgSi_SjsxaZCXdNeRcjopUzKi_mZI9EKsfShTP2F1D3uxnaLNOV4eakE8xMw05N6GNpquUjknLkf7SoAiYgMAUT9X6mg5vpAWiuQUDhvDNB9XEyPGEEDLUvnEko4B8Bk_fYoAX6EBWo5eMWG5_NYWWjPdf5FfV0m3UsU4.Bwo9cwyoMiCWoJe9jKjXwdIt84RoI5a7CQJ10xogZDY&dib_tag=se&keywords=batting%2Bgloves&qid=1768323869&sprefix=batting%2Bglo%2Caps%2C234&sr=8-5&th=1&psc=1
+    * Flex sensors: https://www.adafruit.com/product/1070#technical-details
+    * Stretch rubber sensor: https://www.adafruit.com/product/519
