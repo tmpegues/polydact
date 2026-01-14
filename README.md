@@ -12,3 +12,7 @@
     * Need to read paper shared by Halley
     * Need to read Kris's project
     * Need to start hand mount
+* 260113
+    * Changed plan to start with 3 cable tentacle.
+    * Began settling out plan for sensor glove.
+    * Need to figure out how motors and ROS will work
