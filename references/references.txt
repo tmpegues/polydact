@@ -1,3 +1,5 @@
 1: Clode, 3rd Thumb: https://www.daniclodedesign.com/thethirdthumb
 2: Tentacle: https://www.sciencedirect.com/science/article/pii/S2666998624006033
 3: Kris, BiDexHand: https://wengmister.github.io/#dexterous-hand
+4: Strech sensor glove: https://www.instructables.com/DIY-Glove-Controller-With-E-Textile-Sensors/
+5: dynmamixel tutorial: https://emanual.robotis.com/docs/en/dxl/dxl-quick-start-guide/
