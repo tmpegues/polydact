@@ -11,10 +11,16 @@
 
 Both use TTL
 Both allow velocity, position, extended position, PWM control
-Both have "Input Voltage" feedback. Does this mean it can detect resistance?
+Both have "Input Voltage" feedback. Does this mean it can detect physical resistance?
 
 
 # Software and Setup
 [SDK](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_sdk/overview/)
 
 [Quick Starts](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_sdk/quick_start_guide/#quick-start-guide)
+
+# Following Quick Start Steps
+1. SDK already installed
+2. Decive Setup
+    * Downloaded Dynamixel Wizard
+    *
