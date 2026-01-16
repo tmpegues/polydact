@@ -19,8 +19,10 @@ Both have "Input Voltage" feedback. Does this mean it can detect physical resist
 
 [Quick Starts](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_sdk/quick_start_guide/#quick-start-guide)
 
+[ROS tutorial](https://www.youtube.com/watch?v=E8XPqDjof4U)
+
 # Following Quick Start Steps
 1. SDK already installed
 2. Decive Setup
     * Downloaded Dynamixel Wizard
-    *
+    * Got wizard working and moving the motors

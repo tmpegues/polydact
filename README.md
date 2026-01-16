@@ -30,3 +30,5 @@
         * 14 green + 16 pink = 30 units, 2.5 wraps
     * Continuing to formalize control concept ([detail](./control/overview.md))
     * Reading more about motors ([detail](./control/motor_detail.md))
+* 0115
+    * Got motors moving usign Dynamixel Wizard, following [Quick Starts](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_sdk/quick_start_guide/#quick-start-guide)
