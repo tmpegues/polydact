@@ -13,6 +13,10 @@
   <test_depend>ament_xmllint</test_depend>
   <test_depend>python3-pytest</test_depend>
 
+  <depend>dynamixel_sdk</depend>
+  <depend>dynamixel_sdk_custom_interfaces</depend>
+
+
   <export>
     <build_type>ament_python</build_type>
   </export>
