@@ -1,4 +1,4 @@
-"""Test different control modes of the Dynamixel."""
+"""Test different control modes of one Dynamixel motor."""
 
 from enum import Enum
 
@@ -38,15 +38,39 @@ TORQUE_DISABLE = 0  # Value for disabling the torque
 
 
 class MotorMode(Enum):
+    """State tracker for the motor's Control Mode"""
+
     VELOCITY = 1
     POSITION = 3
     EXT_POSITION = 4
     PWM = 16
 
 
-class MotorCoordinator(Node):
+class SingleMotor(Node):
+    """
+    Handler for a single Dynamixel motor.
+
+    Publishers:
+        + "position" (std_msgs/msg/Int16) - The current position of the motor
+        + "velocity" (std_msgs/msg/Int16) - The current velocity of the motor
+        + "load" (std_msgs/msg/Int16) - The current load of the motor
+
+    Subscribers:
+        + "motor_goal" (polydact_interfaces/msg/Goal) - A goal to set a particular motor to
+
+    Services:
+        + "set_mode" (polydact_interfaces/srv/Mode) - What Control Mode to set the motor to.
+            ( 1 (vel), 3 (pos), 4 (ext pos), or 16 (PWM)')
+
+    Parameters
+    ----------
+        + "ID" (default 2)- The motor ID to to control with this node
+        + "Control_Mode" (default 4) - The initial Control Mode to use
+
+    """
+
     def __init__(self):
-        super().__init__('motor_coordinator')
+        super().__init__('single_motor')
 
         self.active = False
         self.port_handler = PortHandler(DEVICE_NAME)
@@ -65,8 +89,24 @@ class MotorCoordinator(Node):
         self.declare_parameter('ID', 2)  # Motor ID
         self.id = self.get_parameter('ID').value
 
-        self.mode = MotorMode.POSITION
-        self.setup_dynamixel(self.id)
+        self.declare_parameter('Control_Mode', 4)  # Motor ID
+        self.mode = MotorMode(self.get_parameter('Control_Mode').value)
+
+        self.toggle_on_off(-1)
+        self.set_mode(self.mode.value)
+        self.toggle_on_off(1)
+
+        self.addresses = {
+            'toggle_mode': 11,
+            'toggle_torque': 64,
+            MotorMode.POSITION: 116,
+            MotorMode.VELOCITY: 104,
+            'get_pos': 132,
+            'get_load': 126,
+            'get_vel': 128,
+        }
+
+        # self.setup_dynamixel(self.id)
 
         # self.subscription = self.create_subscription(
         #     SetPosition,
@@ -208,7 +248,10 @@ class MotorCoordinator(Node):
             success = True
         else:
             dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-                self.port_handler, self.id, int(not self.active), TORQUE_DISABLE
+                self.port_handler,
+                self.id,
+                ADDR_TORQUE_ENABLE,
+                int(not self.active),
             )
 
             if dxl_comm_result != COMM_SUCCESS:
@@ -247,6 +290,56 @@ class MotorCoordinator(Node):
             success = True
             self.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
         return success
+
+    def timer_callback(self):
+        # Get position, velocity, and current
+        dxl_present_position = False
+        dxl_present_velocity = False
+        dxl_present_load = False
+
+        dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+            self.port_handler, self.id, ADDR_PRESENT_POSITION
+        )
+
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error(
+                f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            self.get_logger().error(
+                f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+
+        dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+            self.port_handler, self.id, ADDR_PRESENT_VELOCITY
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error(
+                f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            self.get_logger().error(
+                f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+
+        dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
+            self.port_handler, self.id, ADDR_PRESENT_LOAD
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error(
+                f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            self.get_logger().error(
+                f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+
+        self.get_logger().debug(
+            f'\nPos: {dxl_present_position}\nVel: {dxl_present_velocity}\nLoa: {dxl_present_load}'
+        )
+        self.posi_pub.publish(Int16(data=dxl_present_position))
+        self.velo_pub.publish(Int16(data=dxl_present_velocity))
+        self.load_pub.publish(Int16(data=dxl_present_load))
 
     def setup_dynamixel(self, dxl_id):
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
@@ -339,67 +432,17 @@ class MotorCoordinator(Node):
         response.position = dxl_present_position
         return response
 
-    def timer_callback(self):
-        # Get position, velocity, and current
-        dxl_present_position = False
-        dxl_present_velocity = False
-        dxl_present_load = False
-
-        dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, self.id, ADDR_PRESENT_POSITION
-        )
-
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(
-                f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            )
-        elif dxl_error != 0:
-            self.get_logger().error(
-                f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-            )
-
-        dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, self.id, ADDR_PRESENT_VELOCITY
-        )
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(
-                f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            )
-        elif dxl_error != 0:
-            self.get_logger().error(
-                f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-            )
-
-        dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, self.id, ADDR_PRESENT_LOAD
-        )
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(
-                f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            )
-        elif dxl_error != 0:
-            self.get_logger().error(
-                f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-            )
-
-        self.get_logger().debug(
-            f'\nPos: {dxl_present_position}\nVel: {dxl_present_velocity}\nLoa: {dxl_present_load}'
-        )
-        self.posi_pub.publish(Int16(data=dxl_present_position))
-        self.velo_pub.publish(Int16(data=dxl_present_velocity))
-        self.load_pub.publish(Int16(data=dxl_present_load))
-
     def __del__(self):
         self.packet_handler.write1ByteTxRx(
             self.port_handler, 1, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
         )
         self.port_handler.closePort()
-        self.get_logger().info('Shutting down motor_coordinator')
+        self.get_logger().info('Shutting down single_motor')
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = MotorCoordinator()
+    node = SingleMotor()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

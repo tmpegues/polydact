@@ -14,8 +14,9 @@
   <test_depend>python3-pytest</test_depend>
 
   <depend>rclpy</depend>
-  <depend>dynamixel_sdk</depend>
-  <depend>polydact_interfaces</depend>
+
+  <exec_depend>dynamixel_sdk</exec_depend>
+  <exec_depend>polydact_interfaces</exec_depend>
 
 
   <export>
