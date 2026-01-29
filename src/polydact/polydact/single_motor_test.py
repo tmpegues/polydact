@@ -106,15 +106,6 @@ class SingleMotor(Node):
             'get_vel': 128,
         }
 
-        # self.setup_dynamixel(self.id)
-
-        # self.subscription = self.create_subscription(
-        #     SetPosition,
-        #     'set_position',
-        #     self.set_position_callback, 10)
-
-        # self.srv = self.create_service(GetPosition, 'get_position', self.get_position_callback)
-
         self.goal_sub = self.create_subscription(Goal, 'motor_goal', self.set_goal_cb, 10)
         self.mode_sub = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
 
@@ -189,11 +180,11 @@ class SingleMotor(Node):
 
         if success:
             self.get_logger().debug(
-                f'Motor {self.id}: Successfully set {self.mode.name} goal set to {goal}'
+                f'Motor {self.id}: Successfully set {self.mode.name} goal to {goal}'
             )
         else:
             self.get_logger().debug(
-                f'Motor {self.id}: Failed to set {self.mode.name} goal set to {goal}'
+                f'Motor {self.id}: Failed to set {self.mode.name} goal to {goal}'
             )
 
     def switch_mode_cb(self, request, response):
@@ -341,96 +332,6 @@ class SingleMotor(Node):
         self.velo_pub.publish(Int16(data=dxl_present_velocity))
         self.load_pub.publish(Int16(data=dxl_present_load))
 
-    def setup_dynamixel(self, dxl_id):
-        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-            self.port_handler, dxl_id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
-        )
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(
-                f'Failed to disable torque: \
-                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            )
-        else:
-            self.get_logger().info('Succeeded to disable torque.')
-
-        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-            self.port_handler, dxl_id, ADDR_OPERATING_MODE, self.mode
-        )
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(
-                f'Failed to set Control Mode {self.mode}: \
-                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            )
-        else:
-            self.get_logger().info(f'Succeeded to set Control Mode {self.mode}.')
-
-        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-            self.port_handler, dxl_id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE
-        )
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(
-                f'Failed to enable torque: \
-                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            )
-        else:
-            self.get_logger().info('Succeeded to enable torque.')
-
-    def set_position_callback(self, msg):
-        goal = msg.position
-
-        if self.mode == MotorMode.POSITION or self.mode == MotorMode.EXT_POSITION:
-            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                self.port_handler, msg.id, ADDR_GOAL_POSITION, goal
-            )
-            if dxl_comm_result != COMM_SUCCESS:
-                self.get_logger().error(
-                    f'Error: \
-                                        {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-                )
-            elif dxl_error != 0:
-                self.get_logger().error(
-                    f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-                )
-            else:
-                self.get_logger().info(
-                    f'Set [ID: {msg.id}] [Goal {self.modes[self.control_mode]}: {msg.position}]'
-                )
-
-        elif self.control_mode == 1:
-            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                self.port_handler, msg.id, ADDR_GOAL_VELOCITY, goal
-            )
-            if dxl_comm_result != COMM_SUCCESS:
-                self.get_logger().error(
-                    f'Error: \
-                                        {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-                )
-            elif dxl_error != 0:
-                self.get_logger().error(
-                    f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-                )
-            else:
-                self.get_logger().info(
-                    f'Set [ID: {msg.id}] [Goal {self.modes[self.control_mode]}: {msg.position}]'
-                )
-
-    def get_position_callback(self, request, response):
-        dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, request.id, ADDR_PRESENT_POSITION
-        )
-
-        if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(f'Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}')
-        elif dxl_error != 0:
-            self.get_logger().error(f'Error: {self.packet_handler.getRxPacketError(dxl_error)}')
-        else:
-            self.get_logger().debug(
-                f'Get [ID: {request.id}] \
-                                [Present Position: {dxl_present_position}]'
-            )
-
-        response.position = dxl_present_position
-        return response
 
     def __del__(self):
         self.packet_handler.write1ByteTxRx(
