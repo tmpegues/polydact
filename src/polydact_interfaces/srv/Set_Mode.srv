@@ -1,3 +1,0 @@
-uint16 mode # 0 = Current, 1 = Velocity, 3 = Position, 4 = Ext. Pos., 5 = Position + Current, 16 = PWM
----
-bool success # True if mode successfully switched, False if any part of the mode switch fails

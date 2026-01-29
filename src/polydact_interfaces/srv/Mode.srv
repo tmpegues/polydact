@@ -1,0 +1,5 @@
+# 0 = Current, 1 = Velocity, 3 = Position, 4 = Ext. Pos., 5 = Position + Current, 16 = PWM
+float64 mode
+---
+# True if mode successfully switched, False if any part of the mode switch fails
+bool success
