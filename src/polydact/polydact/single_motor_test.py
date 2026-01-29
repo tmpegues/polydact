@@ -1,13 +1,15 @@
 """Test different control modes of the Dynamixel."""
+from enum import auto, Enum
 
 from dynamixel_sdk import COMM_SUCCESS
 from dynamixel_sdk import PacketHandler
 from dynamixel_sdk import PortHandler
-from dynamixel_sdk_custom_interfaces.msg import SetPosition
-from dynamixel_sdk_custom_interfaces.srv import GetPosition
+# from dynamixel_sdk_custom_interfaces.msg import SetPosition
+# from dynamixel_sdk_custom_interfaces.srv import GetPosition
+from polydact_interfaces.msg import Goal
+from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
 from std_msgs.msg import Int16
 
 # Control table address
@@ -24,18 +26,26 @@ ADDR_PRESENT_VELOCITY = 128
 PROTOCOL_VERSION = 2.0  # Default Protocol version of DYNAMIXEL X series.
 
 # Default settings
-DXL_ID = 2  # Dynamixel ID : 1
+# Changed this to a node parameter DXL_ID = 2  # Dynamixel ID : 1
 BAUDRATE = 57600  # Dynamixel default baudrate : 57600
 DEVICE_NAME = '/dev/ttyUSB0'  # Check which port is being used on your controller
 
 TORQUE_ENABLE = 1  # Value for enabling the torque
 TORQUE_DISABLE = 0  # Value for disabling the torque
-# CONTROL_MODE  = 4  # 0 = current, 1 = velocity, 3 = position, 4 = extended position, 5 = position + current, 16 = PWM
+# CONTROL_MODE  = 4  # 1 = velocity, 3 = position, 4 = extended position, 16 = PWM
+
+class Mode(Enum):
+    VELOCITY = 1
+    POSITION = 3
+    EXT_POSITION = 4
+    PWM = 16
+
 
 class MotorCoordinator(Node):
     def __init__(self):
         super().__init__('motor_coordinator')
 
+        self.active = False
         self.port_handler = PortHandler(DEVICE_NAME)
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
 
@@ -48,38 +58,114 @@ class MotorCoordinator(Node):
             self.get_logger().error('Failed to set the baudrate!')
             return
         self.get_logger().info('Succeeded to set the baudrate.')
-        self.control_mode = 1  # 0 = current, 1 = velocity, 3 = position, 4 = extended position, 5 = position + current, 16 = PWM
 
-        self.setup_dynamixel(DXL_ID)
+        self.declare_parameter('ID', 2) # Motor ID
+        self.id = self.get_parameter('ID').value
 
-        self.subscription = self.create_subscription(
-            SetPosition,
-            'set_position',
-            self.set_position_callback, 10)
+        self.mode = Mode.POSITION
+        self.setup_dynamixel(self.id)
 
-        self.srv = self.create_service(GetPosition, 'get_position', self.get_position_callback)
+        # self.subscription = self.create_subscription(
+        #     SetPosition,
+        #     'set_position',
+        #     self.set_position_callback, 10)
+
+        # self.srv = self.create_service(GetPosition, 'get_position', self.get_position_callback)
+
+        self.goal_sub = self.create_subscription(Goal, 'motor_goal', self.set_goal_cb, 10)
+        self.mode_sub = self.create_service(Mode, "set_mode", self.switch_mode_cb)
 
         self.posi_pub = self.create_publisher(Int16, "position", 10)
         self.velo_pub = self.create_publisher(Int16, "velocity", 10)
         self.load_pub = self.create_publisher(Int16, "load", 10)
 
-        self.mode_sub = self.create_subscription(Int16, "set_mode", self.mode_switch_cb, 10)
-        self.modes = {0:'current', 1:'velocity', 3:'position', 4:'extended position', 5:'position + current', 16: "PWM"}
-
-
-
 
         self.timer = self.create_timer(1/10, self.timer_callback)
 
-    def mode_switch_cb(self, msg):
-        # 0 = current, 1 = velocity, 3 = position, 4 = extended position, 5 = position + current, 16 = PWM
-        if msg.data not in [0, 1, 3, 4, 5, 16]:
-            self.get_logger().info(f"{msg.data} is not a valid Control Mode")
-        else:
+    def switch_mode_cb(self, request, response):
+        """
+        Switch the control mode of this node's motor.
 
-            self.control_mode = msg.data
-            self.get_logger().info(f"Setting mode: {self.modes[msg.data]}")
-            self.setup_dynamixel(DXL_ID)
+        Args:
+        ----
+        request  (polydact_interfaces/srv/Mode): request.mode contains value to set as the motor's control mode.
+        response (polydact_interfaces/srv/Mode): reponse.success is True if the control mode is successfully changed
+        """
+        response.success = True
+
+        # Filter out invalid values
+        if request.mode not in [1, 3, 4, 16]:
+            self.get_logger().info(f"{request.mode} is not a valid Control Mode. Use 1 (vel), 3 (pos), 4 (ext pos), or 16 (PWM)")
+            response.success = False
+        # Turn torque off to that the control mode can be changed
+        if response.success:
+            response.success = self.toggle_on_off(-1)
+        # Change the control mode
+        if response.success:
+            self.get_logger().info(f"Setting mode: {self.mode.name}")
+            response.success = self.set_mode(request.mode)
+        # Turn torque back on and change state if mode was successfully changed
+        if response.success:
+            self.mode = Mode(request.mode)
+            response.success = self.toggle_on_off(1)
+
+        return response
+
+
+    def toggle_on_off(self, new_state = 0) -> bool:
+        """
+        Toggle the motor on or off
+
+        Args:
+        ----
+        new_state (int): -1 turns motor off, 1 turns motor on, 0 toggles current state
+
+        Returns
+        -------
+        (bool): True if the motor state was succesfully toggled_
+        """
+        success = False
+        self.get_logger().debug(f"Motor on/off was {self.active}.")
+        if (self.active == True and new_state == 1) or (self.active == False and new_state == -1):
+            self.get_logger().debug('Toggle request matches current state')
+            success = True
+        else:
+            dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(self.port_handler, self.id, int(not self.active), TORQUE_DISABLE)
+
+            if dxl_comm_result != COMM_SUCCESS:
+                self.get_logger().error(f'Was not able to toggle motor on/off')
+
+            else:
+                success = True
+                self.active = not self.active
+                self.get_logger().debug('Was able to toggle motor on/off')
+            self.get_logger().debug(f"Torque on/off is now {self.active}.")
+        return success
+
+    def set_mode(self, mode:int) -> bool:
+        """
+        Set the control mode of the motor.
+
+        Args:
+        ----
+        mode (int): 1, 3, 4, or 16 to set control mode to velocity, position, extended position, or PWM
+
+        Returns
+        -------
+        (bool): True if the state was correctly set to the selected mode.
+        """
+        success = False
+        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
+            self.port_handler, self.id, ADDR_OPERATING_MODE, mode
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error(f'Failed to set Control Mode {mode}: \
+                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}')
+        else:
+            success = True
+            self.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
+        return success
+
 
     def setup_dynamixel(self, dxl_id):
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(self.port_handler, dxl_id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
@@ -90,13 +176,13 @@ class MotorCoordinator(Node):
             self.get_logger().info('Succeeded to disable torque.')
 
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-            self.port_handler, dxl_id, ADDR_OPERATING_MODE, self.control_mode
+            self.port_handler, dxl_id, ADDR_OPERATING_MODE, self.mode
         )
         if dxl_comm_result != COMM_SUCCESS:
-            self.get_logger().error(f'Failed to set Control Mode {self.control_mode}: \
+            self.get_logger().error(f'Failed to set Control Mode {self.mode}: \
                                     {self.packet_handler.getTxRxResult(dxl_comm_result)}')
         else:
-            self.get_logger().info(f'Succeeded to set Control Mode {self.control_mode}.')
+            self.get_logger().info(f'Succeeded to set Control Mode {self.mode}.')
 
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
             self.port_handler, dxl_id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE
@@ -107,10 +193,12 @@ class MotorCoordinator(Node):
         else:
             self.get_logger().info('Succeeded to enable torque.')
 
+
+
     def set_position_callback(self, msg):
         goal = msg.position
 
-        if self.control_mode == 3 or self.control_mode == 4:
+        if self.mode == Mode.POSITION or self.mode == Mode.EXT_POSITION:
             dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
                 self.port_handler, msg.id, ADDR_GOAL_POSITION, goal
             )
@@ -158,7 +246,7 @@ class MotorCoordinator(Node):
         dxl_present_load = False
 
         dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, DXL_ID, ADDR_PRESENT_POSITION)
+            self.port_handler, self.id, ADDR_PRESENT_POSITION)
 
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error(f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}')
@@ -166,14 +254,14 @@ class MotorCoordinator(Node):
             self.get_logger().error(f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}')
 
         dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, DXL_ID, ADDR_PRESENT_VELOCITY)
+            self.port_handler, self.id, ADDR_PRESENT_VELOCITY)
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error(f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}')
         elif dxl_error != 0:
             self.get_logger().error(f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}')
 
         dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, DXL_ID, ADDR_PRESENT_LOAD)
+            self.port_handler, self.id, ADDR_PRESENT_LOAD)
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error(f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}')
         elif dxl_error != 0:

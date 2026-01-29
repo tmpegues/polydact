@@ -15,7 +15,7 @@
 
   <depend>rclpy</depend>
   <depend>dynamixel_sdk</depend>
-  <depend>dynamixel_sdk_custom_interfaces</depend>
+  <depend>polydact_interfaces</depend>
 
 
   <export>
