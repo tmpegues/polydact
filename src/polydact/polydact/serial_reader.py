@@ -13,6 +13,9 @@ class SerialReader(Node):
     def __init__(self):
         """Initialize serial reader and goal publisher."""
         super().__init__('serial_reader')
+        self.reads = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.low = 1300
+        self.high = 1750
 
         self.goal_pub = self.create_publisher(Goal, 'serial_goal', 10)
 
@@ -22,11 +25,28 @@ class SerialReader(Node):
 
     def timer_callback(self):
         """Run the serial reader and publish to topic `serial_goal`."""
-        # if self.s_port.in_waiting > 0:
-        line2 = self.s_port.readline().decode('utf-8').strip()
-        if line2:
-            self.goal_pub.publish(Goal(id=2, goal=int(line2)))
-            self.get_logger().info(f'message: {line2}')
+        line = self.s_port.readline().decode('utf-8').strip()
+        self.get_logger().info('')
+        if line:
+            id = int(line[0])
+            raw_value = int(line[2:])
+
+            value = raw_value - ((self.high + self.low) / 2)  # Center the readings at 0
+            self.get_logger().info(f'raw: {raw_value}, value: {value}')
+            value /= (
+                (self.high - self.low) / 2 * (1 / 10)
+            )  # Squish the values down to -1 to 1, then expand to -10 to 10
+            self.get_logger().info(f'raw: {raw_value}, value: {value}')
+            value = int(value)
+
+            self.reads.append(value)
+            self.reads.pop(0)
+
+            self.get_logger().info(f'message: {line}')
+            self.get_logger().info(f'id: {id}, value: {value}')
+            self.get_logger().info(f'{self.reads}')
+
+            self.goal_pub.publish(Goal(id=id, goal=int(sum(self.reads) / 10)))
 
 
 def main(args=None):
