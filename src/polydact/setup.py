@@ -1,6 +1,9 @@
+"""Setup polydact package."""
+
 from pathlib import Path
 
 from setuptools import find_packages, setup
+
 
 def recursive_files(prefix, path):
     """
@@ -11,9 +14,11 @@ def recursive_files(prefix, path):
     :return: List of tuples. 1st element of each tuple is destination path, 2nd element is a list
              of files to copy to that path
     """
-    return [(str(Path(prefix)/subdir),
-            [str(file) for file in subdir.glob('*') if not file.is_dir()])
-            for subdir in Path(path).glob('**')]
+    return [
+        (str(Path(prefix) / subdir), [str(file) for file in subdir.glob('*') if not file.is_dir()])
+        for subdir in Path(path).glob('**')
+    ]
+
 
 package_name = 'polydact'
 
@@ -22,8 +27,7 @@ setup(
     version='0.0.0',
     packages=find_packages(exclude=['test']),
     data_files=[
-        ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
+        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         *recursive_files('share/' + package_name, 'launch'),
     ],
@@ -41,7 +45,8 @@ setup(
     entry_points={
         'console_scripts': [
             'single_motor_test = polydact.single_motor_test:main',
-            'read_write_node = polydact.read_write_node:main'
+            'read_write_node = polydact.read_write_node:main',
+            'serial_reader = polydact.serial_reader:main',
         ],
     },
 )
