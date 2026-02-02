@@ -44,8 +44,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'single_motor_test = polydact.single_motor_test:main',
-            'read_write_node = polydact.read_write_node:main',
+            'motor_coordinator = polydact.motor_coordinator:main',
             'serial_reader = polydact.serial_reader:main',
         ],
     },

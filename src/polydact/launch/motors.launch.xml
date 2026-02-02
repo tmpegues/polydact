@@ -1,16 +1,12 @@
 <launch>
-    <arg name="motor_id" default="2" description="int - What is the ID of the Dynamixel motor you're running?"/>
     <arg name="reader" default ="True" description="Bool - Should a serial reader node be run?"/>
     <arg name="serial_port" default="'/dev/ttyACM0'" description="Which port is the serial device on?"/>
 
     <node pkg="polydact" exec="serial_reader" if="$(var reader)" on_exit="shutdown">
-        <!-- <if="$(var reader)"/> -->
         <param name="serial_port" value="$(var serial_port)"/>
-        <!-- <on_exit="shutdown"/> -->
     </node>
 
-    <node pkg="polydact" exec="single_motor_test">
-        <param name="motor_id" value="$(var motor_id)"/>
+    <node pkg="polydact" exec="motor_coordinator">
     </node>
 
 </launch>

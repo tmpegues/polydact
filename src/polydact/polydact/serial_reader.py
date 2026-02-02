@@ -14,7 +14,7 @@ class SerialReader(Node):
         """Initialize serial reader and goal publisher."""
         super().__init__('serial_reader')
         self.smoothing = 10
-        self.reads = [0] * self.smoothing
+        self.reads = {2: [0] * self.smoothing, 3: [0] * self.smoothing, 5: [0] * self.smoothing}
         self.low = 1300
         self.high = 1750
         self.high = (self.low + self.high) / 2
@@ -28,13 +28,13 @@ class SerialReader(Node):
     def timer_callback(self):
         """Run the serial reader and publish to topic `serial_goal`."""
         line = self.s_port.readline().decode('utf-8').strip()
-        self.get_logger().info('')
+        self.get_logger().info(f'{line}')
         if line:
             id = int(line[0])
             raw_value = int(line[2:])
 
             value = raw_value - ((self.high + self.low) / 2)  # Center the readings at 0
-            self.get_logger().info(f'raw: {raw_value}, value: {value}')
+            self.get_logger().debug(f'raw: {raw_value}, value: {value}')
             value /= (
                 (self.high - self.low) / 2 * (1 / 10)
             )  # Squash the values down to -1 to 1, then expand to -10 to 10
@@ -42,17 +42,17 @@ class SerialReader(Node):
                 value = 10
             elif value < -10:
                 value = -10
-            self.get_logger().info(f'raw: {raw_value}, value: {value}')
+            self.get_logger().debug(f'raw: {raw_value}, value: {value}')
             value = int(value)
 
-            self.reads.append(value)
-            self.reads.pop(0)
+            self.reads[id].append(value)
+            self.reads[id].pop(0)
 
-            self.get_logger().info(f'message: {line}')
-            self.get_logger().info(f'id: {id}, value: {value}')
-            self.get_logger().info(f'{self.reads}')
+            self.get_logger().debug(f'message: {line}')
+            self.get_logger().debug(f'id: {id}, value: {value}')
+            self.get_logger().debug(f'{self.reads[id]}')
 
-            self.goal_pub.publish(Goal(id=id, goal=int(sum(self.reads) / self.smoothing)))
+            self.goal_pub.publish(Goal(id=id, goal=int(sum(self.reads[id]) / self.smoothing)))
 
 
 def main(args=None):
