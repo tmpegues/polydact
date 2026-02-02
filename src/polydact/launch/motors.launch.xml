@@ -1,6 +1,7 @@
 <launch>
-    <arg name="reader" default ="True" description="Bool - Should a serial reader node be run?"/>
-    <arg name="serial_port" default="'/dev/ttyACM0'" description="Which port is the serial device on?"/>
+    <arg name="reader" default ="True" description="Bool: Should a serial reader node be run?"/>
+    <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
+    <arg name="motor_ids" default="[2, 3, 5]" description="list: ids of the motors you're connecting"/>
 
     <node pkg="polydact" exec="serial_reader" if="$(var reader)" on_exit="shutdown">
         <param name="serial_port" value="$(var serial_port)"/>

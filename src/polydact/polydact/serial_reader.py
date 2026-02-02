@@ -31,7 +31,7 @@ class SerialReader(Node):
         self.get_logger().info(f'{line}')
         if line:
             id = int(line[0])
-            raw_value = int(line[2:])
+            raw_value = float(line[2:])
 
             value = raw_value - ((self.high + self.low) / 2)  # Center the readings at 0
             self.get_logger().debug(f'raw: {raw_value}, value: {value}')
@@ -43,7 +43,7 @@ class SerialReader(Node):
             elif value < -10:
                 value = -10
             self.get_logger().debug(f'raw: {raw_value}, value: {value}')
-            value = int(value)
+            value = value
 
             self.reads[id].append(value)
             self.reads[id].pop(0)
@@ -52,7 +52,7 @@ class SerialReader(Node):
             self.get_logger().debug(f'id: {id}, value: {value}')
             self.get_logger().debug(f'{self.reads[id]}')
 
-            self.goal_pub.publish(Goal(id=id, goal=int(sum(self.reads[id]) / self.smoothing)))
+            self.goal_pub.publish(Goal(id=id, goal=(sum(self.reads[id]) / self.smoothing)))
 
 
 def main(args=None):

@@ -73,7 +73,7 @@ class SingleMotor(Node):
         """Initialize motor control."""
         super().__init__('single_motor')
 
-        self.active = False
+        # self.active = False
         self.port_handler = PortHandler(DEVICE_NAME)
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
 
@@ -87,15 +87,16 @@ class SingleMotor(Node):
             return
         self.get_logger().info('Succeeded to set the baudrate.')
 
-        self.declare_parameter('motor_id', 2)
-        self.id = self.get_parameter('motor_id').value
+        self.declare_parameter('motor_ids', [2, 3, 5])
+        self.ids = self.get_parameter('motor_ids').value
 
         self.declare_parameter('Control_Mode', 1)
         self.mode = MotorMode(self.get_parameter('Control_Mode').value)
 
-        self.toggle_on_off(-1)
-        self.set_mode(self.mode.value)
-        self.toggle_on_off(1)
+        for id in self.ids:
+            self.toggle_on_off(id, 0)
+            self.set_mode(id, self.mode.value)
+            self.toggle_on_off(id, 1)
 
         self.addresses = {
             'toggle_mode': 11,
@@ -126,21 +127,23 @@ class SingleMotor(Node):
                                             msg.goal is the goal to set to
 
         """
-        self.get_logger().info(f'Goal {msg.goal} received (current mode: {self.mode.name})')
-        # if msg.id is not self.id:
-        #    return
-        self.id = msg.id
+        self.get_logger().debug(
+            f'Goal {msg.id} {msg.goal} received (current mode: {self.mode.name})'
+        )
+        if msg.id not in self.ids:
+            return
+        id = msg.id
         goal = -1 * msg.goal
         success = False
         match self.mode:
             case MotorMode.VELOCITY:
-                # Provide a 0 velocity dead zone. Goals come between -10 and 10, set +- 1 to dead?
+                # Provide a 0 velocity dead zone. Goals come between -10 and 10, set +- 3 to dead?
                 if abs(goal) > 3:
-                    self.get_logger().info(f'goal pre change{goal}')
+                    self.get_logger().debug(f'goal pre change{goal}')
                     goal = int(goal / 10 * 300)
-                    self.get_logger().info(f'goal post change{goal}')
+                    self.get_logger().debug(f'goal post change{goal}')
                     dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                        self.port_handler, msg.id, ADDR_GOAL_VELOCITY, goal
+                        self.port_handler, id, ADDR_GOAL_VELOCITY, goal
                     )
                     if dxl_comm_result != COMM_SUCCESS:
                         self.get_logger().error(
@@ -156,7 +159,7 @@ class SingleMotor(Node):
                 else:
                     goal = 0
                     dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                        self.port_handler, msg.id, ADDR_GOAL_VELOCITY, goal
+                        self.port_handler, id, ADDR_GOAL_VELOCITY, goal
                     )
                     if dxl_comm_result != COMM_SUCCESS:
                         self.get_logger().error(
@@ -172,7 +175,7 @@ class SingleMotor(Node):
 
             case MotorMode.POSITION:
                 dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                    self.port_handler, self.id, ADDR_GOAL_POSITION, goal
+                    self.port_handler, id, ADDR_GOAL_POSITION, goal
                 )
                 if dxl_comm_result != COMM_SUCCESS:
                     self.get_logger().error(
@@ -187,7 +190,7 @@ class SingleMotor(Node):
 
             case MotorMode.EXT_POSITION:
                 dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                    self.port_handler, self.id, ADDR_GOAL_POSITION, goal
+                    self.port_handler, id, ADDR_GOAL_POSITION, goal
                 )
                 if dxl_comm_result != COMM_SUCCESS:
                     self.get_logger().error(
@@ -204,16 +207,16 @@ class SingleMotor(Node):
 
         match success:
             case True:
-                self.get_logger().info(
-                    f'Motor {self.id}: Successfully set {self.mode.name} goal to {goal}'
+                self.get_logger().debug(
+                    f'Motor {id}: Successfully set {self.mode.name} goal to {goal}'
                 )
             case False:
-                self.get_logger().info(
-                    f'Motor {self.id}: Failed to set {self.mode.name} goal to {goal}'
+                self.get_logger().debug(
+                    f'Motor {id}: Failed to set {self.mode.name} goal to {goal}'
                 )
             case 3:
-                self.get_logger().info(
-                    f'Motor {self.id}: Deadzone goal {goal} (mode: {self.mode.name})'
+                self.get_logger().debug(
+                    f'Motor {id}: Deadzone goal {goal} (mode: {self.mode.name})'
                 )
 
     def switch_mode_cb(self, request, response):
@@ -231,50 +234,56 @@ class SingleMotor(Node):
         response.success = True
 
         # Filter out invalid values
-        if request.mode not in [1, 3, 4, 16]:
+        if request.mode not in [0, 1, 3, 4, 16]:
             self.get_logger().info(
                 f'{request.mode} not valid Control Mode. \
                     Use 1 (vel), 3 (pos), 4 (ext pos), or 16 (PWM)'
             )
             response.success = False
-        # Turn torque off to that the control mode can be changed
-        if response.success:
-            response.success = self.toggle_on_off(-1)
-        # Change the control mode
-        if response.success:
-            self.get_logger().info(f'Setting mode: {self.mode.name}')
-            response.success = self.set_mode(request.mode)
-        # Turn torque back on and change state if mode was successfully changed
-        if response.success:
-            self.mode = MotorMode(request.mode)
-            response.success = self.toggle_on_off(1)
+        self.get_logger().info(f'ids:{self.ids}')
+        for id in self.ids:
+            self.get_logger().info(f'success: {response.success}')
+            # Turn torque off to that the control mode can be changed
+            if response.success:
+                self.get_logger().info(f'id: {id}')
+                response.success = self.toggle_on_off(id, 0)
+            # Change the control mode
+            if response.success and request.mode != 0:
+                self.get_logger().info(f'Setting mode: {self.mode.name}')
+                response.success = self.set_mode(id, request.mode)
+            # Turn torque back on and change state if mode was successfully changed
+            if response.success and request.mode != 0:
+                self.mode = MotorMode(request.mode)
+                response.success = self.toggle_on_off(id, 1)
 
         return response
 
-    def toggle_on_off(self, new_state=0) -> bool:
+    def toggle_on_off(self, id, new_state=0) -> bool:
         """
-        Toggle the motor on or off.
+        Toggle a motor on or off.
 
         Args:
         ----
+        id (int): The motor to toggle
         new_state (int): 0 (default) toggles current state, -1 turns motor off, 1 turns motor on
 
         Returns
         -------
-        (bool): True if the motor state was succesfully toggled_
+        (bool): True if the motor state was succesfully toggled.
 
         """
         success = False
-        self.get_logger().debug(f'Motor on/off was {self.active}.')
-        if (self.active and new_state == 1) or (not self.active and new_state == -1):
+        # self.get_logger().debug(f'Motor on/off was {self.active}.')
+        if False:  # (self.active and new_state == 1) or (not self.active and new_state == -1):
             self.get_logger().debug('Toggle request matches current state')
             success = True
         else:
+            self.get_logger().info(f'new state {new_state}')
             dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
                 self.port_handler,
-                self.id,
+                id,
                 ADDR_TORQUE_ENABLE,
-                int(not self.active),
+                new_state,
             )
 
             if dxl_comm_result != COMM_SUCCESS:
@@ -282,17 +291,18 @@ class SingleMotor(Node):
 
             else:
                 success = True
-                self.active = not self.active
+                # self.active = not self.active
                 self.get_logger().debug('Was able to toggle motor on/off')
-            self.get_logger().debug(f'Torque on/off is now {self.active}.')
+            # self.get_logger().info(f'Torque on/off is now {self.active}.')
         return success
 
-    def set_mode(self, mode: int) -> bool:
+    def set_mode(self, id, mode: int) -> bool:
         """
         Set the control mode of the motor.
 
         Args:
         ----
+        id (int): The id of the motor to change the mode of
         mode (int): 1, 3, 4, or 16 to set mode to velocity, position, extended position, or PWM
 
         Returns
@@ -302,7 +312,7 @@ class SingleMotor(Node):
         """
         success = False
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-            self.port_handler, self.id, ADDR_OPERATING_MODE, mode
+            self.port_handler, id, ADDR_OPERATING_MODE, mode
         )
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error(
@@ -315,13 +325,17 @@ class SingleMotor(Node):
         return success
 
     def timer_callback(self):
-        """Read and publish motor position, velocity, and load."""
+        """
+        Read and publish motor position, velocity, and load.
+
+        It only does 1 motor right now
+        """
         dxl_present_position = False
         dxl_present_velocity = False
         dxl_present_load = False
 
         dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, self.id, ADDR_PRESENT_POSITION
+            self.port_handler, self.ids[0], ADDR_PRESENT_POSITION
         )
 
         if dxl_comm_result != COMM_SUCCESS:
@@ -334,7 +348,7 @@ class SingleMotor(Node):
             )
 
         dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, self.id, ADDR_PRESENT_VELOCITY
+            self.port_handler, self.ids[0], ADDR_PRESENT_VELOCITY
         )
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error(
@@ -346,7 +360,7 @@ class SingleMotor(Node):
             )
 
         dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, self.id, ADDR_PRESENT_LOAD
+            self.port_handler, self.ids[0], ADDR_PRESENT_LOAD
         )
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error(
@@ -368,7 +382,7 @@ class SingleMotor(Node):
     def __del__(self):
         """Unknown, honestly; it was in the example code."""
         self.packet_handler.write1ByteTxRx(
-            self.port_handler, 1, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
+            self.port_handler, self.ids[0], ADDR_TORQUE_ENABLE, TORQUE_DISABLE
         )
         self.port_handler.closePort()
         self.get_logger().info('Shutting down single_motor')
