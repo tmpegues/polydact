@@ -60,7 +60,6 @@ def main(args=None):
     rclpy.init(args=args)
     node = SerialReader()
     rclpy.spin(node)
-    node.destroy_node()
     rclpy.shutdown()
 
 

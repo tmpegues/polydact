@@ -64,7 +64,7 @@ class SingleMotor(Node):
 
     Parameters
     ----------
-        + "ID" (default 2)- The motor ID to to control with this node
+        + "motor_id" (default 2)- The motor ID to to control with this node
         + "Control_Mode" (default 1, velocity) - The initial Control Mode to use
 
     """
@@ -87,10 +87,10 @@ class SingleMotor(Node):
             return
         self.get_logger().info('Succeeded to set the baudrate.')
 
-        self.declare_parameter('ID', 2)  # Motor ID
-        self.id = self.get_parameter('ID').value
+        self.declare_parameter('motor_id', 2)
+        self.id = self.get_parameter('motor_id').value
 
-        self.declare_parameter('Control_Mode', 1)  # Motor ID
+        self.declare_parameter('Control_Mode', 1)
         self.mode = MotorMode(self.get_parameter('Control_Mode').value)
 
         self.toggle_on_off(-1)
@@ -129,7 +129,7 @@ class SingleMotor(Node):
         self.get_logger().info(f'Goal {msg.goal} received (current mode: {self.mode.name})')
         if msg.id is not self.id:
             return
-        goal = msg.goal
+        goal = -1 * msg.goal
         success = False
         match self.mode:
             case MotorMode.VELOCITY:
@@ -378,7 +378,6 @@ def main(args=None):
     rclpy.init(args=args)
     node = SingleMotor()
     rclpy.spin(node)
-    node.destroy_node()
     rclpy.shutdown()
 
 
