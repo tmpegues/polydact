@@ -13,11 +13,13 @@ class SerialReader(Node):
     def __init__(self):
         """Initialize serial reader and goal publisher."""
         super().__init__('serial_reader')
-        self.reads = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.smoothing = 10
+        self.reads = [0] * self.smoothing
         self.low = 1300
         self.high = 1750
+        self.high = (self.low + self.high) / 2
 
-        self.goal_pub = self.create_publisher(Goal, 'serial_goal', 10)
+        self.goal_pub = self.create_publisher(Goal, 'motor_goal', 10)
 
         self.s_port = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 
@@ -35,7 +37,11 @@ class SerialReader(Node):
             self.get_logger().info(f'raw: {raw_value}, value: {value}')
             value /= (
                 (self.high - self.low) / 2 * (1 / 10)
-            )  # Squish the values down to -1 to 1, then expand to -10 to 10
+            )  # Squash the values down to -1 to 1, then expand to -10 to 10
+            if value > 10:
+                value = 10
+            elif value < -10:
+                value = -10
             self.get_logger().info(f'raw: {raw_value}, value: {value}')
             value = int(value)
 
@@ -46,7 +52,7 @@ class SerialReader(Node):
             self.get_logger().info(f'id: {id}, value: {value}')
             self.get_logger().info(f'{self.reads}')
 
-            self.goal_pub.publish(Goal(id=id, goal=int(sum(self.reads) / 10)))
+            self.goal_pub.publish(Goal(id=id, goal=int(sum(self.reads) / self.smoothing)))
 
 
 def main(args=None):
