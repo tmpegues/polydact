@@ -8,11 +8,10 @@ from dynamixel_sdk import PortHandler
 
 # from dynamixel_sdk_custom_interfaces.msg import SetPosition
 # from dynamixel_sdk_custom_interfaces.srv import GetPosition
-from polydact_interfaces.msg import Goal
+from polydact_interfaces.msg import MotorState
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int16
 
 # Control table address
 ADDR_OPERATING_MODE = 11  # Control table address is different in Dynamixel model
@@ -56,7 +55,7 @@ class SingleMotor(Node):
         + "load" (std_msgs/msg/Int16) - The current load of the motor
 
     Subscribers:
-        + "motor_goal" (polydact_interfaces/msg/Goal) - A goal to set a particular motor to
+        + "motor_goal" (polydact_interfaces/msg/MotorState) - A goal to set a particular motor to
 
     Services:
         + "set_mode" (polydact_interfaces/srv/Mode) - What Control Mode to set the motor to.
@@ -64,8 +63,8 @@ class SingleMotor(Node):
 
     Parameters
     ----------
-        + "motor_id" (default 2)- The motor ID to to control with this node
-        + "Control_Mode" (default 1, velocity) - The initial Control Mode to use
+        + "motor_ids" - The motor ID to to control with this node
+        + "control_mode" - The initial Control Mode to use
 
     """
 
@@ -73,20 +72,21 @@ class SingleMotor(Node):
         """Initialize motor control."""
         super().__init__('single_motor')
 
-        # self.active = False
+        # Handle motor port communification
         self.port_handler = PortHandler(DEVICE_NAME)
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
 
         if not self.port_handler.openPort():
-            self.get_logger().error('Failed to open the port!')
+            self.get_logger().error('Port failed to open')
             return
-        self.get_logger().info('Succeeded to open the port.')
+        self.get_logger().info('Port opened')
 
         if not self.port_handler.setBaudRate(BAUDRATE):
-            self.get_logger().error('Failed to set the baudrate!')
+            self.get_logger().error('Baudrate setting failure')
             return
-        self.get_logger().info('Succeeded to set the baudrate.')
+        self.get_logger().info('Baudrate set')
 
+        # Set motors to my settings
         self.declare_parameter('motor_ids', [2, 3, 5])
         self.ids = self.get_parameter('motor_ids').value
 
@@ -108,12 +108,12 @@ class SingleMotor(Node):
             'get_vel': 128,
         }
 
-        self.goal_sub = self.create_subscription(Goal, 'motor_goal', self.set_goal_cb, 10)
+        self.goal_sub = self.create_subscription(MotorState, 'motor_goal', self.set_goal_cb, 10)
         self.mode_sub = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
 
-        self.posi_pub = self.create_publisher(Int16, 'position', 10)
-        self.velo_pub = self.create_publisher(Int16, 'velocity', 10)
-        self.load_pub = self.create_publisher(Int16, 'load', 10)
+        self.posi_pub = self.create_publisher(MotorState, 'cur_position', 10)
+        self.velo_pub = self.create_publisher(MotorState, 'cur_velocity', 10)
+        self.load_pub = self.create_publisher(MotorState, 'cur_load', 10)
 
         self.timer = self.create_timer(1 / 10, self.timer_callback)
 
@@ -123,22 +123,24 @@ class SingleMotor(Node):
 
         Args:
         ----
-        msg (polydact_interfaces/msg/Goal): msg.id is the motor to set the goal for
+        msg (polydact_interfaces/msg/MotorState): msg.id is the motor to set the goal for
                                             msg.goal is the goal to set to
 
         """
         self.get_logger().debug(
-            f'Goal {msg.id} {msg.goal} received (current mode: {self.mode.name})'
+            f'MotorState {msg.id} {msg.goal} received (current mode: {self.mode.name})'
         )
         if msg.id not in self.ids:
+            self.get_logger().error(f'Unexpected motor goal received: {msg}')
             return
+
         id = msg.id
         goal = -1 * msg.goal
         success = False
         match self.mode:
             case MotorMode.VELOCITY:
-                # Provide a 0 velocity dead zone. Goals come between -10 and 10, set +- 3 to dead?
-                if abs(goal) > 3:
+                deadzone = 0.3
+                if abs(goal) > deadzone:
                     self.get_logger().debug(f'goal pre change{goal}')
                     goal = int(goal / 10 * 300)
                     self.get_logger().debug(f'goal post change{goal}')
@@ -296,7 +298,7 @@ class SingleMotor(Node):
             # self.get_logger().info(f'Torque on/off is now {self.active}.')
         return success
 
-    def set_mode(self, id, mode: int) -> bool:
+    def set_mode(self, id: int, mode: int) -> bool:
         """
         Set the control mode of the motor.
 
@@ -324,60 +326,139 @@ class SingleMotor(Node):
             self.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
         return success
 
-    def timer_callback(self):
+    def get_state(self, id: int):
         """
-        Read and publish motor position, velocity, and load.
+        Get the state of one motor.
 
-        It only does 1 motor right now
+        Args:
+        ----
+        id (int): The motor to read and publish the state of
+
+        Return:
+        ------
+        int, int, int: the current position, velocity, and load of the specified motor
+
         """
-        dxl_present_position = False
-        dxl_present_velocity = False
-        dxl_present_load = False
+        current_position = False
+        current_velocity = False
+        current_load = False
 
-        dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, self.ids[0], ADDR_PRESENT_POSITION
+        current_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_POSITION
         )
 
         if dxl_comm_result != COMM_SUCCESS:
+            current_position = -1000
             self.get_logger().error(
                 f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
             )
         elif dxl_error != 0:
+            current_position = -1000
             self.get_logger().error(
                 f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
 
-        dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, self.ids[0], ADDR_PRESENT_VELOCITY
+        current_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_VELOCITY
         )
         if dxl_comm_result != COMM_SUCCESS:
+            current_velocity = -1000
             self.get_logger().error(
                 f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
             )
         elif dxl_error != 0:
+            current_position = -1000
             self.get_logger().error(
                 f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
 
-        dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, self.ids[0], ADDR_PRESENT_LOAD
+        current_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_LOAD
         )
         if dxl_comm_result != COMM_SUCCESS:
+            current_load = -1000
             self.get_logger().error(
                 f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
             )
         elif dxl_error != 0:
+            current_position = -1000
             self.get_logger().error(
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
 
-        # self.get_logger().debug(
-        #    f'\nPos: {dxl_present_position}\nVel: {dxl_present_velocity}\nLoa: {dxl_present_load}'
+        return current_position, current_velocity, current_load
+
+    def pub_state(self, id: int, state: tuple):
+        """
+        Publish the current position, velocity, and load of a specific motor.
+
+        Args:
+        ----
+        id (int): Which motor's state is being published?
+        state (tuple): current (position, velocity, load) of the motor
+
+        """
+        if -1000 in state:
+            self.get_logger().error('Faulty state published (bad values published as -1000)')
+        else:
+            self.posi_pub.publish(MotorState(id=id, state=state[0]))
+            self.velo_pub.publish(MotorState(id=id, state=state[1]))
+            self.load_pub.publish(MotorState(id=id, state=state[2]))
+
+    def timer_callback(self):
+        """Read and publish motor position, velocity, and load."""
+        for id in self.ids:
+            self.pub_state(id, self.get_state(id))
+        # dxl_present_position = False
+        # dxl_present_velocity = False
+        # dxl_present_load = False
+
+        # dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+        #     self.port_handler, self.ids[0], ADDR_PRESENT_POSITION
         # )
-        self.get_logger().debug(f'Vel: {dxl_present_velocity}')
-        self.posi_pub.publish(Int16(data=dxl_present_position))
-        self.velo_pub.publish(Int16(data=dxl_present_velocity))
-        self.load_pub.publish(Int16(data=dxl_present_load))
+
+        # if dxl_comm_result != COMM_SUCCESS:
+        #     self.get_logger().error(
+        #         f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+        #     )
+        # elif dxl_error != 0:
+        #     self.get_logger().error(
+        #         f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+        #     )
+
+        # dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+        #     self.port_handler, self.ids[0], ADDR_PRESENT_VELOCITY
+        # )
+        # if dxl_comm_result != COMM_SUCCESS:
+        #     self.get_logger().error(
+        #         f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+        #     )
+        # elif dxl_error != 0:
+        #     self.get_logger().error(
+        #         f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+        #     )
+
+        # dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
+        #     self.port_handler, self.ids[0], ADDR_PRESENT_LOAD
+        # )
+        # if dxl_comm_result != COMM_SUCCESS:
+        #     self.get_logger().error(
+        #         f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+        #     )
+        # elif dxl_error != 0:
+        #     self.get_logger().error(
+        #         f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+        #     )
+
+        # # self.get_logger().debug(
+
+    # #    f'\nPos: {dxl_present_position}\nVel: {dxl_present_velocity}\nLoa: {dxl_present_load}'
+    # # )
+    # for id in self.ids:
+
+    #     self.posi_pub.publish(MotorState(state=dxl_present_position))
+    #     self.velo_pub.publish(MotorState(state=dxl_present_velocity))
+    #     self.load_pub.publish(MotorState(state=dxl_present_load))
 
     def __del__(self):
         """Unknown, honestly; it was in the example code."""
