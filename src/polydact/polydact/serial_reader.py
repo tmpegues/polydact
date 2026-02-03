@@ -47,15 +47,15 @@ class Sensor:
          (float): The normalized rolling average of sensor readings.
 
         """
-        value = sum(self.reads) / self.smoothing
-
+        value = sum(self.reads) / self.smoothing  # Average
         value -= (self.max + self.min) / 2  # Center at 0
         value /= (self.max - self.min) / 2  # Squash the values down to -1 to 1
 
-        if value > 10:
-            value = 10
-        elif value < -10:
-            value = -10
+        # If the max and min are off for some reason, clamp the values
+        if value > 1:
+            value = 1
+        elif value < -1:
+            value = -1
 
         return value
 
@@ -66,33 +66,50 @@ class SerialReader(Node):
     def __init__(self):
         """Initialize serial reader and goal publisher."""
         super().__init__('serial_reader')
-        self.smoothing = 10
-        self.reads = {2: [0] * self.smoothing, 3: [0] * self.smoothing, 5: [0] * self.smoothing}
-        self.low = 1300
-        self.high = 1750
-        self.high = (self.low + self.high) / 2
+        # self.smoothing = 10
+        # self.reads = {2: [0] * self.smoothing, 3: [0] * self.smoothing, 5: [0] * self.smoothing}
+        # self.low = 1300
+        # self.high = 1750
+        # self.high = (self.low + self.high) / 2
 
+        # Get motor list and initialize sensors
         self.declare_parameter('motor_ids', [2, 3, 5])
         motor_ids = self.get_parameter('motor_ids').value
         self.sensors = {}
         for id in motor_ids:
             self.sensors.update({id: Sensor(id)})
 
-        self.goal_pub = self.create_publisher(Goal, 'motor_goal', 10)
+        # Set up serial port
+        self.declare_parameter('serial_port', '/dev/ttyACM0')
+        port = self.get_parameter('serial_port').value
+        self.s_port = serial.Serial(port, 115200, timeout=1)
 
-        self.s_port = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
-
+        # Begin Sesor calibration
         self.freq = 1000
-
         self.extremes = {2: [10000, 0, 0], 3: [1000, 0, 0], 5: [1000, 0, 0]}
+
         self.calibration_timer = self.create_timer(1 / self.freq, self.calibration)
         self.timer = self.create_timer(1 / self.freq, self.timer_callback)
+        self.goal_pub = self.create_publisher(Goal, 'motor_goal', 10)
 
     def calibration(self):
-        """Read values from the connected sensors for a few seconds  to determin ranges."""
+        """Read values from the connected sensors for a few seconds to determine ranges."""
+        num_points = 2000
         line = self.s_port.readline().decode('utf-8').strip()
         if line:
-            pass
+            id = int(line[0])
+            read = float(line[2:])
+            if id not in self.sensors:
+                self.get_logger().error(f'Sensor message id {id} is not valid id.')
+            elif self.sensors[id].calibrated >= num_points:
+                # If we've already read this many points, do not process any further points
+                pass
+            elif self.sensors[id].calibrated < num_points:
+                # If we haven't read this many points, check against min and max
+                if read > self.sensors[id].max:
+                    self.sensors[id].max = read
+                elif read < self.sensors[id].min:
+                    self.sensors.min = read
 
     def timer_callback(self):
         """Get the most recent serial line and also publish all motor goals."""
@@ -100,11 +117,11 @@ class SerialReader(Node):
         self.get_logger().info(f'{line}')
         if line:
             id = int(line[0])
-            raw_value = float(line[2:])
-            self.sensors[id].new_read(raw_value)
+            read = float(line[2:])
+            self.sensors[id].new_read(read)
 
         for sensor in self.sensors:
-            self.goal_pub.publish(Goal())
+            self.goal_pub.publish(Goal(id=sensor.id, goal=sensor.get_value()))
 
 
 def main(args=None):
