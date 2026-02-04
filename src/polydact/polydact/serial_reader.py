@@ -151,21 +151,36 @@ class SerialReader(Node):
         for id, sensor in self.sensors.items():
             self.get_logger().info(f'Sensor {sensor.id}: {sensor.min} - {sensor.max}')
 
-    def timer_callback(self):
-        """Get the most recent serial line and also publish all motor goals."""
-        line = self.s_port.readline().decode('utf-8').strip()
+    def get_line(self):
+        """
+        Get the most recent serial line.
 
+        Returns
+        -------
+        (Bool or (int, float)): False if no or invalid serial read, (id, read) if the was valid
+
+        """
+        line = self.s_port.readline().decode('utf-8').strip()
+        result = False
         if line:
             self.get_logger().debug(f'{line} (timer)')
             id = int(line[0])
             if id in self.sensors:
                 try:
-                    self.sensors[id].new_read(float(line[2:]))
+                    read = float(line[2:])
+                    result = (id, read)
                 except:
                     self.get_logger().error(f'Faulty serial read: {line}')
 
             else:
                 self.get_logger().error('Unexpected serial line: {line}')
+        return result
+
+    def timer_callback(self):
+        """Get the most recent serial line and also publish all motor goals."""
+        line = self.get_line()
+        if line:
+            self.sensors[line[0]].new_read(line[1])
 
         if self.array:
             motor_states = MotorStateArray()
