@@ -105,22 +105,17 @@ class SerialReader(Node):
 
         """
         calibrated = 0
-        loops = 0
+        loop = 0
         self.get_logger().info(f'Beginning min/max calibration for {len(self.sensors)} sensors.')
         while calibrated < len(self.sensors) * num_points:
             self.get_logger().debug(
-                f'Calibrated points: {calibrated} of {len(self.sensors) * num_points}'
+                f'Loop {loop} ({calibrated}/{len(self.sensors) * num_points})',
+                throttle_duration_sec=1,
             )
-            loops += 1
-            self.get_logger().debug(f'Loop {loops}')
-            line = self.s_port.readline().decode('utf-8').strip()
+            loop += 1
+            line = self.get_line()
             if line:
-                self.get_logger().debug(f'Serial read: {line}')
-                id = int(line[0])
-                try:
-                    read = float(line[2:])
-                except:
-                    self.get_logger().error(f'Faulty serial read: {line}')
+                id, read = line
                 if id not in self.sensors:
                     self.get_logger().error(f'Sensor message id {id} is not valid id.')
                     break
@@ -163,17 +158,19 @@ class SerialReader(Node):
         line = self.s_port.readline().decode('utf-8').strip()
         result = False
         if line:
-            self.get_logger().debug(f'{line} (timer)')
             id = int(line[0])
             if id in self.sensors:
                 try:
                     read = float(line[2:])
                     result = (id, read)
-                except:
-                    self.get_logger().error(f'Faulty serial read: {line}')
+                    self.get_logger().debug(f'Successful read: {line}', throttle_duration_sec=1)
+                except ValueError:
+                    self.get_logger().error(f'Faulty serial line: {line}')
 
             else:
-                self.get_logger().error('Unexpected serial line: {line}')
+                self.get_logger().error(f'Unexpected serial line: {line}')
+        else:
+            self.get_logger().debug('No serial line available.')
         return result
 
     def timer_callback(self):
@@ -182,13 +179,14 @@ class SerialReader(Node):
         if line:
             self.sensors[line[0]].new_read(line[1])
 
+        # This if is to pick which publisher to use
         if self.array:
             motor_states = MotorStateArray()
-            for id, sensor in self.sensors.items():
+            for sensor in self.sensors.values():
                 motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
             self.goal_array_pub.publish(motor_states)
         else:
-            for id, sensor in self.sensors.items():
+            for sensor in self.sensors.values():
                 motor_state = MotorState(id=sensor.id, state=sensor.get_value())
                 self.goal_pub.publish(motor_state)
 
