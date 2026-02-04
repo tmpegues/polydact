@@ -10,6 +10,7 @@ from polydact_interfaces.msg import MotorStateArray
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
+import serial
 
 # Control table address
 ADDR_OPERATING_MODE = 11  # Control table address is different in Dynamixel model
@@ -69,15 +70,24 @@ class MotorCoordinator(Node):
     def __init__(self):
         """Initialize motor control."""
         super().__init__('motor_coordiantor')
-
         # Handle motor port communification
         self.port_handler = PortHandler(DEVICE_NAME)
-        self.packet_handler = PacketHandler(PROTOCOL_VERSION)
 
-        if not self.port_handler.openPort():
-            self.get_logger().error('Port failed to open')
-            return
-        self.get_logger().info('Port opened')
+        self.packet_handler = PacketHandler(PROTOCOL_VERSION)
+        while True:
+            try:
+                self.port_handler.openPort()
+                break
+            except FileNotFoundError:
+                self.get_logger().error(
+                    f'Could not open port {DEVICE_NAME}. Is motor board in the correct port',
+                    throttle_duration_sec=1,
+                )
+            except serial.SerialException:
+                self.get_logger().error(
+                    f'Could not open port {DEVICE_NAME}. Is motor board in the correct port',
+                    throttle_duration_sec=1,
+                )
 
         if not self.port_handler.setBaudRate(BAUDRATE):
             self.get_logger().error('Baudrate setting failure')
@@ -484,10 +494,11 @@ class MotorCoordinator(Node):
 
     def __del__(self):
         """Turn off the motors and close port if the node is closed properly."""
-        for id in self.ids:
-            self.packet_handler.write1ByteTxRx(
-                self.port_handler, id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
-            )
+        if self.ids:
+            for id in self.ids:
+                self.packet_handler.write1ByteTxRx(
+                    self.port_handler, id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
+                )
         self.port_handler.closePort()
         self.get_logger().info('Shutting down motors')
 
