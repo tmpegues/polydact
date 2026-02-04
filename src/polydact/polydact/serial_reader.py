@@ -100,6 +100,7 @@ class SerialReader(Node):
         self.pub_freq = 50
         read_freq = 100
         if not self.array:
+            self.last_published = 0
             read_freq *= 4
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
@@ -191,7 +192,6 @@ class SerialReader(Node):
 
     def reading_timer_callback(self):
         """Read the serial monitor."""
-        self.get_logger().debug('Reading Timer')
         line = self.get_line()
         if line:
             self.sensors[line[0]].new_read(line[1])
@@ -206,9 +206,18 @@ class SerialReader(Node):
                 motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
             self.goal_array_pub.publish(motor_states)
         else:
-            for sensor in self.sensors.values():
-                motor_state = MotorState(id=sensor.id, state=sensor.get_value())
-                self.goal_pub.publish(motor_state)
+            ids = [2, 3, 5]
+            self.goal_pub.publish(
+                MotorState(
+                    id=self.sensors[ids[self.last_published]].id,
+                    state=self.sensors[ids[self.last_published]].get_value(),
+                )
+            )
+            self.last_published += 1
+            self.last_published %= 3
+            # for sensor in self.sensors.values():
+            #     motor_state = MotorState(id=sensor.id, state=sensor.get_value())
+            #     self.goal_pub.publish(motor_state)
 
 
 def main(args=None):
