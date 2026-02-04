@@ -163,7 +163,7 @@ class SerialReader(Node):
                 try:
                     read = float(line[2:])
                     result = (id, read)
-                    self.get_logger().debug(f'Successful read: {line}', throttle_duration_sec=1)
+                    self.get_logger().debug(f'Read: {line}')
                 except ValueError:
                     self.get_logger().error(f'Faulty serial line: {line}')
 
