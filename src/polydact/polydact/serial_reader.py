@@ -23,7 +23,7 @@ class Sensor:
         self.id = id
         self.min = 10000.0
         self.max = 0.0
-        self.smoothing = 1
+        self.smoothing = 10
         self.reads = [0.0] * self.smoothing
         self.calibrated = 0
 
@@ -81,19 +81,32 @@ class SerialReader(Node):
         # Set up serial port
         self.declare_parameter('serial_port', '/dev/ttyACM0')
         port = self.get_parameter('serial_port').value
-        self.s_port = serial.Serial(port, 115200, timeout=1)
+        self.s_port = False
+        while not self.s_port:
+            try:
+                self.s_port = serial.Serial(port, 115200, timeout=10)
+            except serial.SerialException:
+                self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.calibration(100)
-
-        # Begin publishing normalized sensor readings
-        self.freq = 50
-        self.timer = self.create_timer(1 / self.freq, self.timer_callback)
+        self.calibration(200)
 
         self.declare_parameter('array', False)
         self.array = self.get_parameter('array').value
         self.goal_array_pub = self.create_publisher(MotorStateArray, 'motor_goal_array', 10)
         self.goal_pub = self.create_publisher(MotorState, 'motor_goal', 10)
+
+        # Begin publishing normalized sensor readings
+        self.pub_freq = 50
+        read_freq = 100
+        if not self.array:
+            read_freq *= 4
+            self.get_logger().info(f'{read_freq}')
+
+        self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
+        self.publishing_timer = self.create_timer(
+            1 / self.pub_freq, self.publishing_timer_callback
+        )
 
     def calibration(self, num_points: int):
         """
@@ -155,8 +168,12 @@ class SerialReader(Node):
         (Bool or (int, float)): False if no or invalid serial read, (id, read) if the was valid
 
         """
-        line = self.s_port.readline().decode('utf-8').strip()
         result = False
+        line = False
+        try:
+            line = self.s_port.readline().decode('utf-8').strip()
+        except serial.SerialException:
+            self.get_logger().error('No device.')
         if line:
             id = int(line[0])
             if id in self.sensors:
@@ -173,13 +190,17 @@ class SerialReader(Node):
             self.get_logger().debug('No serial line available.')
         return result
 
-    def timer_callback(self):
-        """Get the most recent serial line and also publish all motor goals."""
+    def reading_timer_callback(self):
+        """Read the serial monitor."""
+        self.get_logger().debug('Reading Timer')
         line = self.get_line()
         if line:
             self.sensors[line[0]].new_read(line[1])
 
-        # This if is to pick which publisher to use
+    def publishing_timer_callback(self):
+        """Publish all motor goals."""
+        self.get_logger().debug('Publishing Timer')
+
         if self.array:
             motor_states = MotorStateArray()
             for sensor in self.sensors.values():
