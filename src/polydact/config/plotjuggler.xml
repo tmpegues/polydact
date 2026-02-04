@@ -1,16 +1,19 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <root>
- <tabbed_widget parent="main_window" name="Main Window">
-  <Tab containers="1" tab_name="tab1">
+ <tabbed_widget name="Main Window" parent="main_window">
+  <Tab tab_name="tab1" containers="1">
    <Container>
-    <DockSplitter count="1" orientation="-" sizes="1">
+    <DockSplitter count="1" sizes="1" orientation="-">
      <DockArea name="...">
-      <plot style="LinesAndDots" flip_y="false" mode="TimeSeries" flip_x="false">
-       <range top="1.050000" right="1.939809" bottom="-1.050000" left="0.000000"/>
-       <limitY max="1.05" min="-1.05"/>
-       <curve name="2 Goal" color="#ff7f0e"/>
-       <curve name="3 Goal" color="#f14cc1"/>
-       <curve name="5 Goal" color="#9467bd"/>
+      <plot flip_y="false" mode="TimeSeries" style="LinesAndDots" flip_x="false">
+       <range left="279.805991" bottom="-1.050000" top="1.050000" right="377.022528"/>
+       <limitY min="-1.05" max="1.05"/>
+       <curve name="2 Goal" color="#00ff00"/>
+       <curve name="3 Goal" color="#000000"/>
+       <curve name="5 Goal" color="#0000ff"/>
+       <curve name="motor_2" color="#00ff00"/>
+       <curve name="motor_3" color="#000000"/>
+       <curve name="motor_5" color="#0000ff"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -23,7 +26,7 @@
  <!-- - - - - - - - - - - - - - - -->
  <Plugins>
   <plugin ID="DataLoad CSV">
-   <parameters time_axis="" delimiter="0"/>
+   <parameters delimiter="0" time_axis=""/>
   </plugin>
   <plugin ID="DataLoad MCAP"/>
   <plugin ID="DataLoad ROS2 bags">
@@ -41,7 +44,7 @@
    <max_array_size value="100"/>
    <boolean_strings_to_number value="true"/>
    <remove_suffix_from_strings value="true"/>
-   <selected_topics value="/motor_goal"/>
+   <selected_topics value="/motor_goal;/motor_goal_array"/>
   </plugin>
   <plugin ID="UDP Server"/>
   <plugin ID="WebSocket Server"/>
@@ -60,25 +63,40 @@
  <previouslyLoaded_Streamer name="ROS2 Topic Subscriber"/>
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
-  <snippet name="motor_2">
+  <snippet name="5 Goal">
+   <global></global>
+   <function>if (v1 == 5) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal_array/states[2]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal_array/states[2]/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="2 Goal">
    <global></global>
    <function>if (v1 == 2) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/states[0]/state</linked_source>
+   <linked_source>/motor_goal_array/states[0]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal_array/states[0]/id</v1>
+   </additional_sources>
   </snippet>
-  <snippet name="motor_3">
+  <snippet name="3 Goal">
    <global></global>
    <function>if (v1 == 3) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/state</linked_source>
+   <linked_source>/motor_goal_array/states[1]/state</linked_source>
    <additional_sources>
-    <v1>/motor_goal/id</v1>
+    <v1>/motor_goal_array/states[1]/id</v1>
    </additional_sources>
   </snippet>
   <snippet name="motor_5">
@@ -93,40 +111,28 @@ end</function>
     <v1>/motor_goal/id</v1>
    </additional_sources>
   </snippet>
-  <snippet name="3 Goal">
+  <snippet name="motor_3">
    <global></global>
    <function>if (v1 == 3) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/states[1]/state</linked_source>
+   <linked_source>/motor_goal/state</linked_source>
    <additional_sources>
-    <v1>/motor_goal/states[1]/id</v1>
+    <v1>/motor_goal/id</v1>
    </additional_sources>
   </snippet>
-  <snippet name="2 Goal">
+  <snippet name="motor_2">
    <global></global>
    <function>if (v1 == 2) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/states[0]/state</linked_source>
+   <linked_source>/motor_goal/state</linked_source>
    <additional_sources>
-    <v1>/motor_goal/states[0]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="5 Goal">
-   <global></global>
-   <function>if (v1 == 5) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/states[2]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/states[2]/id</v1>
+    <v1>/motor_goal/id</v1>
    </additional_sources>
   </snippet>
  </customMathEquations>
