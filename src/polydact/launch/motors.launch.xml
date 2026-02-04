@@ -2,15 +2,21 @@
     <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
     <arg name="motor_ids" default="[2, 3, 5]" description="list: ids of the motors you're connecting. If you're reading sensors, the ids should match the fingers your sensors are on (1 = thumb, 5 = pinky)"/>
     <arg name="control_mode" default="1" description="1, 3, 4, or 16: Start node in velocity, position, extended position, or PWM control mode"/>
+    <arg name="array" default="True" description="(bool) Publish motor goals from SerialReader node as a MotorStateArray (True) or as individual MotorStates"/>
+    <arg name="plotter" default="True" description="(bool) Launch plotjuggler to view motor goal messages?"/>
 
     <node pkg="polydact" exec="serial_reader" on_exit="shutdown">
         <param name="serial_port" value="$(var serial_port)"/>
         <param name="motor_ids" value="$(var motor_ids)"/>
+        <param name="array" value="$(var array)"/>
     </node>
 
     <node pkg="polydact" exec="motor_coordinator" on_exit="shutdown">
         <param name="motor_ids" value="$(var motor_ids)"/>
         <param name="control_mode" value="$(var control_mode)"/>
+        <param name="array" value="$(var array)"/>
     </node>
+
+    <node pkg="plotjuggler" exec="plotjuggler"/>
 
 </launch>

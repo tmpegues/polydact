@@ -23,7 +23,7 @@ class Sensor:
         self.id = id
         self.min = 10000.0
         self.max = 0.0
-        self.smoothing = 15
+        self.smoothing = 1
         self.reads = [0.0] * self.smoothing
         self.calibrated = 0
 
@@ -89,7 +89,11 @@ class SerialReader(Node):
         # Begin publishing normalized sensor readings
         self.freq = 50
         self.timer = self.create_timer(1 / self.freq, self.timer_callback)
-        self.goal_pub = self.create_publisher(MotorStateArray, 'motor_goal', 10)
+
+        self.declare_parameter('array', False)
+        self.array = self.get_parameter('array').value
+        self.goal_array_pub = self.create_publisher(MotorStateArray, 'motor_goal_array', 10)
+        self.goal_pub = self.create_publisher(MotorState, 'motor_goal', 10)
 
     def calibration(self, num_points: int):
         """
@@ -113,26 +117,31 @@ class SerialReader(Node):
             if line:
                 self.get_logger().debug(f'Serial read: {line}')
                 id = int(line[0])
-                read = float(line[2:])
+                try:
+                    read = float(line[2:])
+                except:
+                    self.get_logger().error(f'Faulty serial read: {line}')
                 if id not in self.sensors:
                     self.get_logger().error(f'Sensor message id {id} is not valid id.')
-                elif self.sensors[id].calibrated >= num_points:
+                    break
+                sensor = self.sensors[id]
+                if sensor.calibrated >= num_points:
                     # If we've already read many points, do not process any further points
                     pass
-                elif self.sensors[id].calibrated < num_points:
+                elif sensor.calibrated < num_points:
                     # If we haven't read this many points, check against min and max
-                    self.sensors[id].calibrated += 1
+                    sensor.calibrated += 1
                     calibrated += 1
-                    if read > self.sensors[id].max:
-                        self.sensors[id].max = read
-                    elif read < self.sensors[id].min:
-                        self.sensors[id].min = read
+                    if read > sensor.max:
+                        sensor.max = read
+                    elif read < sensor.min:
+                        sensor.min = read
 
-                    if self.sensors[id].calibrated >= num_points:
+                    if sensor.calibrated >= num_points:
                         self.get_logger().info(
-                            f'Sensor {self.sensors[id].id} has all {num_points} min/max points collected.'
+                            f'Sensor {sensor.id} has all {num_points} min/max points collected.'
                         )
-                        self.sensors[id].set_average()
+                        sensor.set_average()
                 else:
                     self.get_logger().error(
                         f'Unexpected condition in calibration. Serial line: {line}'
@@ -149,18 +158,24 @@ class SerialReader(Node):
         if line:
             self.get_logger().debug(f'{line} (timer)')
             id = int(line[0])
-            read = float(line[2:])
-
             if id in self.sensors:
-                self.sensors[id].new_read(read)
+                try:
+                    self.sensors[id].new_read(float(line[2:]))
+                except:
+                    self.get_logger().error(f'Faulty serial read: {line}')
 
             else:
                 self.get_logger().error('Unexpected serial line: {line}')
-        motor_states = MotorStateArray()
-        for id, sensor in self.sensors.items():
-            motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
-        self.goal_pub.publish(motor_states)
-        self.get_logger().info('array published')
+
+        if self.array:
+            motor_states = MotorStateArray()
+            for id, sensor in self.sensors.items():
+                motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
+            self.goal_array_pub.publish(motor_states)
+        else:
+            for id, sensor in self.sensors.items():
+                motor_state = MotorState(id=sensor.id, state=sensor.get_value())
+                self.goal_pub.publish(motor_state)
 
 
 def main(args=None):
