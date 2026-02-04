@@ -5,10 +5,8 @@ from enum import Enum
 from dynamixel_sdk import COMM_SUCCESS
 from dynamixel_sdk import PacketHandler
 from dynamixel_sdk import PortHandler
-
-# from dynamixel_sdk_custom_interfaces.msg import SetPosition
-# from dynamixel_sdk_custom_interfaces.srv import GetPosition
 from polydact_interfaces.msg import MotorState
+from polydact_interfaces.msg import MotorStateArray
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
@@ -45,9 +43,9 @@ class MotorMode(Enum):
     PWM = 16
 
 
-class SingleMotor(Node):
+class MotorCoordinator(Node):
     """
-    Handler for a single Dynamixel motor.
+    Handler for Dynamixel motors.
 
     Publishers:
         + "position" (std_msgs/msg/Int16) - The current position of the motor
@@ -70,7 +68,7 @@ class SingleMotor(Node):
 
     def __init__(self):
         """Initialize motor control."""
-        super().__init__('single_motor')
+        super().__init__('motor_coordiantor')
 
         # Handle motor port communification
         self.port_handler = PortHandler(DEVICE_NAME)
@@ -108,7 +106,9 @@ class SingleMotor(Node):
             'get_vel': 128,
         }
 
-        self.goal_sub = self.create_subscription(MotorState, 'motor_goal', self.set_goal_cb, 10)
+        self.goal_sub = self.create_subscription(
+            MotorStateArray, 'motor_goal', self.goal_array_cb, 10
+        )
         self.mode_sub = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
 
         self.posi_pub = self.create_publisher(MotorState, 'cur_position', 10)
@@ -117,25 +117,132 @@ class SingleMotor(Node):
 
         self.timer = self.create_timer(1 / 10, self.timer_callback)
 
-    def set_goal_cb(self, msg):
+    def goal_array_cb(self, msgarray):
+        """
+        Set the goals for all motors contained in the MotorStateArray.
+
+        Args:
+        ----
+        msg (polydact_interfaces/msg/MotorStateArray): The MotorState messages (id, state) to set
+
+        """
+        self.get_logger().info('array received')
+        for msg in msgarray.states:
+            # self.set_single_goal(state)
+
+            self.get_logger().debug(
+                f'MotorState {msg.id} {msg.state} received (current mode: {self.mode.name})'
+            )
+            if msg.id not in self.ids:
+                self.get_logger().error(f'Unexpected motor goal received: {msg}')
+                return
+
+            id = msg.id
+            goal = -1 * msg.state
+            success = False
+            match self.mode:
+                case MotorMode.VELOCITY:
+                    deadzone = 0.3
+                    if abs(goal) > deadzone:
+                        self.get_logger().debug(f'goal pre change{goal}')
+                        goal = int(goal / 10 * 300)
+                        self.get_logger().debug(f'goal post change{goal}')
+                        dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+                            self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+                        )
+                        if dxl_comm_result != COMM_SUCCESS:
+                            self.get_logger().error(
+                                f'Error: \
+                                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+                            )
+                        elif dxl_error != 0:
+                            self.get_logger().error(
+                                f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+                            )
+                        else:
+                            success = True
+                    else:
+                        goal = 0
+                        dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+                            self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+                        )
+                        if dxl_comm_result != COMM_SUCCESS:
+                            self.get_logger().error(
+                                f'Error: \
+                                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+                            )
+                        elif dxl_error != 0:
+                            self.get_logger().error(
+                                f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+                            )
+                        else:
+                            success = 3  # Going to use 3 to mean goal was in deadzone
+
+                case MotorMode.POSITION:
+                    dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+                        self.port_handler, id, ADDR_GOAL_POSITION, goal
+                    )
+                    if dxl_comm_result != COMM_SUCCESS:
+                        self.get_logger().error(
+                            f'Position Set Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+                        )
+                    elif dxl_error != 0:
+                        self.get_logger().error(
+                            f'Position Set Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+                        )
+                    else:
+                        success = True
+
+                case MotorMode.EXT_POSITION:
+                    dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+                        self.port_handler, id, ADDR_GOAL_POSITION, goal
+                    )
+                    if dxl_comm_result != COMM_SUCCESS:
+                        self.get_logger().error(
+                            f'Position Set Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+                        )
+                    elif dxl_error != 0:
+                        self.get_logger().error(
+                            f'Position Set Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+                        )
+                    else:
+                        success = True
+                case MotorMode.PWM:
+                    pass
+
+            match success:
+                case True:
+                    self.get_logger().debug(
+                        f'Motor {id}: Successfully set {self.mode.name} goal to {goal}'
+                    )
+                case False:
+                    self.get_logger().debug(
+                        f'Motor {id}: Failed to set {self.mode.name} goal to {goal}'
+                    )
+                case 3:
+                    self.get_logger().debug(
+                        f'Motor {id}: Deadzone goal {goal} (mode: {self.mode.name})'
+                    )
+
+    def set_single_goal(self, msg):
         """
         Set the position, velocity, or PWM goal for the motor.
 
         Args:
         ----
         msg (polydact_interfaces/msg/MotorState): msg.id is the motor to set the goal for
-                                            msg.goal is the goal to set to
+                                            msg.state is the goal to set to
 
         """
         self.get_logger().debug(
-            f'MotorState {msg.id} {msg.goal} received (current mode: {self.mode.name})'
+            f'MotorState {msg.id} {msg.state} received (current mode: {self.mode.name})'
         )
         if msg.id not in self.ids:
             self.get_logger().error(f'Unexpected motor goal received: {msg}')
             return
 
         id = msg.id
-        goal = -1 * msg.goal
+        goal = -1 * msg.state
         success = False
         match self.mode:
             case MotorMode.VELOCITY:
@@ -280,7 +387,6 @@ class SingleMotor(Node):
             self.get_logger().debug('Toggle request matches current state')
             success = True
         else:
-            self.get_logger().info(f'new state {new_state}')
             dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
                 self.port_handler,
                 id,
@@ -289,12 +395,16 @@ class SingleMotor(Node):
             )
 
             if dxl_comm_result != COMM_SUCCESS:
-                self.get_logger().error('Was not able to toggle motor on/off')
+                self.get_logger().error(
+                    f'Was not able to toggle Motor {id}. on/off 1/-1 : {new_state}'
+                )
 
             else:
                 success = True
                 # self.active = not self.active
-                self.get_logger().debug('Was able to toggle motor on/off')
+                self.get_logger().debug(
+                    f'Was able to toggle motor on/off. on/off 1/-1 : {new_state}'
+                )
             # self.get_logger().info(f'Torque on/off is now {self.active}.')
         return success
 
@@ -385,8 +495,10 @@ class SingleMotor(Node):
             self.get_logger().error(
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
-
-        return current_position, current_velocity, current_load
+        self.get_logger().debug(
+            f'get_state: {float(current_position)}, {float(current_velocity)}, {float(current_load)}'
+        )
+        return float(current_position), float(current_velocity), float(current_load)
 
     def pub_state(self, id: int, state: tuple):
         """
@@ -462,17 +574,18 @@ class SingleMotor(Node):
 
     def __del__(self):
         """Unknown, honestly; it was in the example code."""
-        self.packet_handler.write1ByteTxRx(
-            self.port_handler, self.ids[0], ADDR_TORQUE_ENABLE, TORQUE_DISABLE
-        )
+        for id in self.ids:
+            self.packet_handler.write1ByteTxRx(
+                self.port_handler, id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
+            )
         self.port_handler.closePort()
-        self.get_logger().info('Shutting down single_motor')
+        self.get_logger().info('Shutting down motors')
 
 
 def main(args=None):
     """Run the node."""
     rclpy.init(args=args)
-    node = SingleMotor()
+    node = MotorCoordinator()
     rclpy.spin(node)
     rclpy.shutdown()
 

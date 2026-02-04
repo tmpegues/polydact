@@ -3,14 +3,14 @@
  <tabbed_widget parent="main_window" name="Main Window">
   <Tab containers="1" tab_name="tab1">
    <Container>
-    <DockSplitter sizes="1" orientation="-" count="1">
+    <DockSplitter count="1" orientation="-" sizes="1">
      <DockArea name="...">
-      <plot flip_y="false" mode="TimeSeries" style="Lines" flip_x="false">
-       <range right="1015.633739" bottom="-5.250000" top="5.250000" left="1010.614468"/>
-       <limitY/>
-       <curve color="#1ac938" name="motor_3"/>
-       <curve color="#d62728" name="motor_2"/>
-       <curve color="#ff7f0e" name="motor_5"/>
+      <plot style="LinesAndDots" flip_y="false" mode="TimeSeries" flip_x="false">
+       <range top="1.050000" right="1.939809" bottom="-1.050000" left="0.000000"/>
+       <limitY max="1.05" min="-1.05"/>
+       <curve name="2 Goal" color="#ff7f0e"/>
+       <curve name="3 Goal" color="#f14cc1"/>
+       <curve name="5 Goal" color="#9467bd"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -23,7 +23,7 @@
  <!-- - - - - - - - - - - - - - - -->
  <Plugins>
   <plugin ID="DataLoad CSV">
-   <parameters delimiter="0" time_axis=""/>
+   <parameters time_axis="" delimiter="0"/>
   </plugin>
   <plugin ID="DataLoad MCAP"/>
   <plugin ID="DataLoad ROS2 bags">
@@ -60,40 +60,73 @@
  <previouslyLoaded_Streamer name="ROS2 Topic Subscriber"/>
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
-  <snippet name="motor_5">
+  <snippet name="motor_2">
    <global></global>
-   <function>if (v1 == 5) then 
+   <function>if (v1 == 2) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/goal</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
+   <linked_source>/motor_goal/states[0]/state</linked_source>
   </snippet>
   <snippet name="motor_3">
    <global></global>
-   <function>if (v1 == 3) then 
+   <function>if (v1 == 3) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/goal</linked_source>
+   <linked_source>/motor_goal/state</linked_source>
    <additional_sources>
     <v1>/motor_goal/id</v1>
    </additional_sources>
   </snippet>
-  <snippet name="motor_2">
+  <snippet name="motor_5">
    <global></global>
-   <function>if (v1 == 2) then 
+   <function>if (v1 == 5) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/goal</linked_source>
+   <linked_source>/motor_goal/state</linked_source>
    <additional_sources>
     <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="3 Goal">
+   <global></global>
+   <function>if (v1 == 3) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/states[1]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/states[1]/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="2 Goal">
+   <global></global>
+   <function>if (v1 == 2) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/states[0]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/states[0]/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="5 Goal">
+   <global></global>
+   <function>if (v1 == 5) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/states[2]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/states[2]/id</v1>
    </additional_sources>
   </snippet>
  </customMathEquations>

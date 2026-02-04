@@ -1,6 +1,7 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
 from polydact_interfaces.msg import MotorState
+from polydact_interfaces.msg import MotorStateArray
 import rclpy
 from rclpy.node import Node
 
@@ -20,9 +21,9 @@ class Sensor:
 
         """
         self.id = id
-        self.min = 10000
-        self.max = 0
-        self.smoothing = 10
+        self.min = 10000.0
+        self.max = 0.0
+        self.smoothing = 15
         self.reads = [0.0] * self.smoothing
         self.calibrated = 0
 
@@ -56,8 +57,11 @@ class Sensor:
             value = 1
         elif value < -1:
             value = -1
+        return float(value)
 
-        return value
+    def set_average(self):
+        """Fill the reads list with a neutral value so motors initialize stopped."""
+        self.reads = [(self.max + self.min) / 2] * self.smoothing
 
 
 class SerialReader(Node):
@@ -80,12 +84,12 @@ class SerialReader(Node):
         self.s_port = serial.Serial(port, 115200, timeout=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.calibration(5000)
+        self.calibration(100)
 
         # Begin publishing normalized sensor readings
-        self.freq = 1000
+        self.freq = 50
         self.timer = self.create_timer(1 / self.freq, self.timer_callback)
-        self.goal_pub = self.create_publisher(MotorState, 'motor_goal', 10)
+        self.goal_pub = self.create_publisher(MotorStateArray, 'motor_goal', 10)
 
     def calibration(self, num_points: int):
         """
@@ -97,53 +101,66 @@ class SerialReader(Node):
 
         """
         calibrated = 0
+        loops = 0
         self.get_logger().info(f'Beginning min/max calibration for {len(self.sensors)} sensors.')
-        while calibrated < len(self.sensors):
+        while calibrated < len(self.sensors) * num_points:
+            self.get_logger().debug(
+                f'Calibrated points: {calibrated} of {len(self.sensors) * num_points}'
+            )
+            loops += 1
+            self.get_logger().debug(f'Loop {loops}')
             line = self.s_port.readline().decode('utf-8').strip()
             if line:
+                self.get_logger().debug(f'Serial read: {line}')
                 id = int(line[0])
                 read = float(line[2:])
                 if id not in self.sensors:
                     self.get_logger().error(f'Sensor message id {id} is not valid id.')
                 elif self.sensors[id].calibrated >= num_points:
-                    pass  # If we've already read many points, do not process any further points
+                    # If we've already read many points, do not process any further points
+                    pass
                 elif self.sensors[id].calibrated < num_points:
                     # If we haven't read this many points, check against min and max
-                    self.calibrated += 1
+                    self.sensors[id].calibrated += 1
+                    calibrated += 1
                     if read > self.sensors[id].max:
                         self.sensors[id].max = read
                     elif read < self.sensors[id].min:
                         self.sensors[id].min = read
+
+                    if self.sensors[id].calibrated >= num_points:
+                        self.get_logger().info(
+                            f'Sensor {self.sensors[id].id} has all {num_points} min/max points collected.'
+                        )
+                        self.sensors[id].set_average()
                 else:
                     self.get_logger().error(
                         f'Unexpected condition in calibration. Serial line: {line}'
                     )
 
-            calibrated = 0
-            for sensor in self.sensors:
-                if sensor.calibrated >= num_points:
-                    self.get_logger().info(
-                        f'Sensor {sensor.id} has all {num_points} min/max points collected.'
-                    )
-                    calibrated += 1
         self.get_logger().info('Sensor min/max calibration complete:')
-        for sensor in self.sensors:
+        for id, sensor in self.sensors.items():
             self.get_logger().info(f'Sensor {sensor.id}: {sensor.min} - {sensor.max}')
 
     def timer_callback(self):
         """Get the most recent serial line and also publish all motor goals."""
         line = self.s_port.readline().decode('utf-8').strip()
-        self.get_logger().info(f'{line}')
+
         if line:
+            self.get_logger().debug(f'{line} (timer)')
             id = int(line[0])
             read = float(line[2:])
+
             if id in self.sensors:
                 self.sensors[id].new_read(read)
+
             else:
                 self.get_logger().error('Unexpected serial line: {line}')
-
-        for sensor in self.sensors:
-            self.goal_pub.publish(MotorState(id=sensor.id, state=sensor.get_value()))
+        motor_states = MotorStateArray()
+        for id, sensor in self.sensors.items():
+            motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
+        self.goal_pub.publish(motor_states)
+        self.get_logger().info('array published')
 
 
 def main(args=None):
