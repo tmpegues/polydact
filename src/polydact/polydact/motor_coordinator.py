@@ -140,9 +140,11 @@ class MotorCoordinator(Node):
         state_array (polydact_interfaces/msg/MotorStateArray): The MotorStates (id, state) to set
 
         """
-        self.get_logger().info(f'MotorStateArray received (len {len(state_array)} states) ')
+        self.get_logger().debug(
+            f'MotorStateArray received (len {len(state_array.states)} states) '
+        )
         for state_msg in state_array.states:
-            self.set_single_goal(state_msg.state)
+            self.set_single_goal(state_msg)
 
     def set_single_goal(self, msg: MotorState):
         """
