@@ -117,11 +117,11 @@ class MotorCoordinator(Node):
         }
 
         self.goal_array_sub = self.create_subscription(
-            MotorStateArray, 'motor_goal', self.goal_array_cb, 10
+            MotorStateArray, 'motor_goal_array', self.goal_array_cb, 10
         )
 
         self.goal_sub = self.create_subscription(
-            MotorStateArray, 'motor_goal', self.goal_array_cb, 10
+            MotorState, 'motor_goal', self.set_single_goal, 10
         )
         self.mode_srv = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
 

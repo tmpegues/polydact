@@ -17,6 +17,6 @@
         <param name="array" value="$(var array)"/>
     </node>
 
-    <node pkg="plotjuggler" exec="plotjuggler"/>
+    <node pkg="plotjuggler" exec="plotjuggler" args="-nl $(find-pkg-share polydact)/config/plotjuggler.xml" if="$(var plotter)"/>
 
 </launch>

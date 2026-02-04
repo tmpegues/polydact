@@ -101,7 +101,6 @@ class SerialReader(Node):
         read_freq = 100
         if not self.array:
             read_freq *= 4
-            self.get_logger().info(f'{read_freq}')
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
         self.publishing_timer = self.create_timer(
