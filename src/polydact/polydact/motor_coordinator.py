@@ -10,6 +10,7 @@ from polydact_interfaces.msg import MotorStateArray
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSDurabilityPolicy, QoSProfile
 import serial
 
 # Control table address
@@ -121,7 +122,10 @@ class MotorCoordinator(Node):
         )
 
         self.goal_sub = self.create_subscription(
-            MotorState, 'motor_goal', self.set_single_goal, 10
+            MotorState,
+            'motor_goal',
+            self.set_single_goal,
+            QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
         )
         self.mode_srv = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
 

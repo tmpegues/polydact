@@ -4,6 +4,7 @@ from polydact_interfaces.msg import MotorState
 from polydact_interfaces.msg import MotorStateArray
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSDurabilityPolicy, QoSProfile
 
 import serial
 
@@ -94,7 +95,11 @@ class SerialReader(Node):
         self.declare_parameter('array', False)
         self.array = self.get_parameter('array').value
         self.goal_array_pub = self.create_publisher(MotorStateArray, 'motor_goal_array', 10)
-        self.goal_pub = self.create_publisher(MotorState, 'motor_goal', 10)
+        self.goal_pub = self.create_publisher(
+            MotorState,
+            'motor_goal',
+            QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
+        )
 
         # Begin publishing normalized sensor readings
         self.pub_freq = 100
