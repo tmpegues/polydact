@@ -157,9 +157,9 @@ class MotorCoordinator(Node):
                                             msg.state is the goal to set to
 
         """
-        self.get_logger().debug(
-            f'MotorState {msg.id} {msg.state} received (current mode: {self.mode.name})'
-        )
+        # self.get_logger().debug(
+        #     f'MotorState {msg.id} {msg.state} received (current mode: {self.mode.name})'
+        # )
         if msg.id not in self.ids:
             self.get_logger().error(f'Unexpected motor goal received: {msg}')
             return
@@ -171,13 +171,11 @@ class MotorCoordinator(Node):
             case MotorMode.VELOCITY:
                 deadzone = 0.3
                 if abs(goal) > deadzone:
-                    self.get_logger().debug(f'goal pre change{goal}')
                     if goal > 0:
                         goal = (goal - deadzone) / (1 - deadzone)
                     if goal < 0:
                         goal = (goal + deadzone) / (1 - deadzone)
                     goal = int(goal**3 * 300)
-                    self.get_logger().debug(f'goal post change{goal}')
                     dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
                         self.port_handler, id, ADDR_GOAL_VELOCITY, goal
                     )
