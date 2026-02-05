@@ -89,7 +89,7 @@ class SerialReader(Node):
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.calibration(200)
+        self.calibration(500)
 
         self.declare_parameter('array', False)
         self.array = self.get_parameter('array').value
@@ -97,15 +97,15 @@ class SerialReader(Node):
         self.goal_pub = self.create_publisher(MotorState, 'motor_goal', 10)
 
         # Begin publishing normalized sensor readings
-        self.pub_freq = 50
-        read_freq = 100
+        self.pub_freq = 100
+        read_freq = 300
         if not self.array:
             self.last_published = 0
-            read_freq *= 4
+            read_freq *= 3.1
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
         self.publishing_timer = self.create_timer(
-            1 / self.pub_freq, self.publishing_timer_callback
+            int(1 / self.pub_freq), self.publishing_timer_callback
         )
 
     def calibration(self, num_points: int):
@@ -121,7 +121,7 @@ class SerialReader(Node):
         loop = 0
         self.get_logger().info(f'Beginning min/max calibration for {len(self.sensors)} sensors.')
         while calibrated < len(self.sensors) * num_points:
-            self.get_logger().debug(
+            self.get_logger().info(
                 f'Loop {loop} ({calibrated}/{len(self.sensors) * num_points})',
                 throttle_duration_sec=1,
             )

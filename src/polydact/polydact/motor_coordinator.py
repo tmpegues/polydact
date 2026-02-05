@@ -80,19 +80,19 @@ class MotorCoordinator(Node):
                 break
             except FileNotFoundError:
                 self.get_logger().error(
-                    f'Could not open port {DEVICE_NAME}. Is motor board in the correct port',
+                    f'Could not open port {DEVICE_NAME}. Is motor board in the correct port?',
                     throttle_duration_sec=1,
                 )
             except serial.SerialException:
                 self.get_logger().error(
-                    f'Could not open port {DEVICE_NAME}. Is motor board in the correct port',
+                    f'Could not open port {DEVICE_NAME}. Is motor board in the correct port?',
                     throttle_duration_sec=1,
                 )
 
         if not self.port_handler.setBaudRate(BAUDRATE):
-            self.get_logger().error('Baudrate setting failure')
+            self.get_logger().error('Could not set baudrate')
             return
-        self.get_logger().info('Baudrate set')
+        self.get_logger().debug('Baudrate set')
 
         # Set motors to my settings
         self.declare_parameter('motor_ids', [2, 3, 5])
@@ -130,6 +130,7 @@ class MotorCoordinator(Node):
         self.load_pub = self.create_publisher(MotorState, 'cur_load', 10)
 
         self.timer = self.create_timer(1 / 100, self.timer_callback)
+        self.get_logger().info('Motor Coordinator ready')
 
     def goal_array_cb(self, state_array: MotorStateArray):
         """
@@ -171,7 +172,11 @@ class MotorCoordinator(Node):
                 deadzone = 0.3
                 if abs(goal) > deadzone:
                     self.get_logger().debug(f'goal pre change{goal}')
-                    goal = int(goal / 10 * 300)
+                    if goal > 0:
+                        goal = (goal - deadzone) / (1 - deadzone)
+                    if goal < 0:
+                        goal = (goal + deadzone) / (1 - deadzone)
+                    goal = int(goal**3 * 300)
                     self.get_logger().debug(f'goal post change{goal}')
                     dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
                         self.port_handler, id, ADDR_GOAL_VELOCITY, goal
@@ -443,56 +448,6 @@ class MotorCoordinator(Node):
         """Read and publish motor position, velocity, and load."""
         for id in self.ids:
             self.pub_state(id, self.get_state(id))
-        # dxl_present_position = False
-        # dxl_present_velocity = False
-        # dxl_present_load = False
-
-        # dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-        #     self.port_handler, self.ids[0], ADDR_PRESENT_POSITION
-        # )
-
-        # if dxl_comm_result != COMM_SUCCESS:
-        #     self.get_logger().error(
-        #         f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-        #     )
-        # elif dxl_error != 0:
-        #     self.get_logger().error(
-        #         f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-        #     )
-
-        # dxl_present_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-        #     self.port_handler, self.ids[0], ADDR_PRESENT_VELOCITY
-        # )
-        # if dxl_comm_result != COMM_SUCCESS:
-        #     self.get_logger().error(
-        #         f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-        #     )
-        # elif dxl_error != 0:
-        #     self.get_logger().error(
-        #         f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-        #     )
-
-        # dxl_present_load, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-        #     self.port_handler, self.ids[0], ADDR_PRESENT_LOAD
-        # )
-        # if dxl_comm_result != COMM_SUCCESS:
-        #     self.get_logger().error(
-        #         f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-        #     )
-        # elif dxl_error != 0:
-        #     self.get_logger().error(
-        #         f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-        #     )
-
-        # # self.get_logger().debug(
-
-    # #    f'\nPos: {dxl_present_position}\nVel: {dxl_present_velocity}\nLoa: {dxl_present_load}'
-    # # )
-    # for id in self.ids:
-
-    #     self.posi_pub.publish(MotorState(state=dxl_present_position))
-    #     self.velo_pub.publish(MotorState(state=dxl_present_velocity))
-    #     self.load_pub.publish(MotorState(state=dxl_present_load))
 
     def __del__(self):
         """Turn off the motors and close port if the node is closed properly."""
