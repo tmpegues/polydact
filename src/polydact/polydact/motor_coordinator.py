@@ -46,7 +46,7 @@ class MotorCoordinator(Node):
 
     Services:
         + "set_mode" (polydact_interfaces/srv/Mode) - What Control Mode to set the motor to.
-            ( 1 (vel), 3 (pos), 4 (ext pos), or 16 (PWM)')
+            (0 (off), 1 (vel)')
 
     Parameters
     ----------
@@ -58,6 +58,7 @@ class MotorCoordinator(Node):
     def __init__(self):
         """Initialize motor control."""
         super().__init__('motor_coordiantor')
+        self.active = 0
 
         # Handle motor port communification
         self.port_handler = PortHandler(DEVICE_NAME)
@@ -149,7 +150,7 @@ class MotorCoordinator(Node):
 
         """
         # self.get_logger().debug(
-        #     f'MotorState {msg.id} {msg.state} received (current mode: {self.mode.name})'
+        #     f'MotorState {msg.id} {msg.state} received (current mode: {self.mode})'
         # )
         if msg.id not in self.ids:
             self.get_logger().error(f'Unexpected motor goal received: {msg}')
@@ -199,17 +200,11 @@ class MotorCoordinator(Node):
 
         match success:
             case True:
-                self.get_logger().debug(
-                    f'Motor {id}: Successfully set {self.mode.name} goal to {goal}'
-                )
+                self.get_logger().debug(f'Motor {id}: Successfully set {self.mode} goal to {goal}')
             case False:
-                self.get_logger().debug(
-                    f'Motor {id}: Failed to set {self.mode.name} goal to {goal}'
-                )
+                self.get_logger().debug(f'Motor {id}: Failed to set {self.mode} goal to {goal}')
             case 3:
-                self.get_logger().debug(
-                    f'Motor {id}: Deadzone goal {goal} (mode: {self.mode.name})'
-                )
+                self.get_logger().debug(f'Motor {id}: Deadzone goal {goal} (mode: {self.mode})')
 
     def switch_mode_cb(self, request, response):
         """
@@ -226,26 +221,24 @@ class MotorCoordinator(Node):
         response.success = True
 
         # Filter out invalid values
-        if request.mode not in [0, 1, 3, 4, 16]:
-            self.get_logger().info(
-                f'{request.mode} not valid Control Mode. \
-                    Use 1 (vel), 3 (pos), 4 (ext pos), or 16 (PWM)'
+        if request.mode not in [0, 1]:
+            self.get_logger().error(
+                f'{request.mode} not valid Control Mode. Use 0 (off), 1 (velocity)'
             )
             response.success = False
-        self.get_logger().info(f'ids:{self.ids}')
+
         for id in self.ids:
-            self.get_logger().info(f'success: {response.success}')
             # Turn torque off to that the control mode can be changed
             if response.success:
                 self.get_logger().info(f'id: {id}')
                 response.success = self.toggle_on_off(id, 0)
             # Change the control mode
             if response.success and request.mode != 0:
-                self.get_logger().info(f'Setting mode: {self.mode.name}')
+                self.get_logger().info(f'Setting mode: {self.mode}')
                 response.success = self.set_mode(id, request.mode)
             # Turn torque back on and change state if mode was successfully changed
             if response.success and request.mode != 0:
-                self.mode = MotorMode(request.mode)
+                self.mode = self.mode
                 response.success = self.toggle_on_off(id, 1)
 
         return response
@@ -265,30 +258,22 @@ class MotorCoordinator(Node):
 
         """
         success = False
-        # self.get_logger().debug(f'Motor on/off was {self.active}.')
-        if False:  # (self.active and new_state == 1) or (not self.active and new_state == -1):
-            self.get_logger().debug('Toggle request matches current state')
-            success = True
+
+        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
+            self.port_handler,
+            id,
+            ADDR_TORQUE_ENABLE,
+            new_state,
+        )
+
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error(f'Was not able to toggle Motor {id}. on/off 1/0: {new_state}')
+
         else:
-            dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-                self.port_handler,
-                id,
-                ADDR_TORQUE_ENABLE,
-                new_state,
-            )
+            success = True
+            self.active = not self.active
+            self.get_logger().debug(f'Was able to toggle motor on/off. on/off 1/0: {new_state}')
 
-            if dxl_comm_result != COMM_SUCCESS:
-                self.get_logger().error(
-                    f'Was not able to toggle Motor {id}. on/off 1/-1 : {new_state}'
-                )
-
-            else:
-                success = True
-                # self.active = not self.active
-                self.get_logger().debug(
-                    f'Was able to toggle motor on/off. on/off 1/-1 : {new_state}'
-                )
-            # self.get_logger().info(f'Torque on/off is now {self.active}.')
         return success
 
     def set_mode(self, id: int, mode: int) -> bool:
