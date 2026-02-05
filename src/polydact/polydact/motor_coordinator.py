@@ -1,7 +1,5 @@
 """Test different control modes of one Dynamixel motor."""
 
-from enum import Enum
-
 from dynamixel_sdk import COMM_SUCCESS
 from dynamixel_sdk import PacketHandler
 from dynamixel_sdk import PortHandler
@@ -27,22 +25,11 @@ ADDR_PRESENT_VELOCITY = 128
 PROTOCOL_VERSION = 2.0  # Default Protocol version of DYNAMIXEL X series.
 
 # Default settings
-# Changed this to a node parameter DXL_ID = 2  # Dynamixel ID : 1
 BAUDRATE = 57600  # Dynamixel default baudrate : 57600
 DEVICE_NAME = '/dev/ttyUSB0'  # Check which port is being used on your controller
 
 TORQUE_ENABLE = 1  # Value for enabling the torque
 TORQUE_DISABLE = 0  # Value for disabling the torque
-# CONTROL_MODE  = 4  # 1 = velocity, 3 = position, 4 = extended position, 16 = PWM
-
-
-class MotorMode(Enum):
-    """State tracker for the motor's Control Mode."""
-
-    VELOCITY = 1
-    POSITION = 3
-    EXT_POSITION = 4
-    PWM = 16
 
 
 class MotorCoordinator(Node):
@@ -71,9 +58,9 @@ class MotorCoordinator(Node):
     def __init__(self):
         """Initialize motor control."""
         super().__init__('motor_coordiantor')
+
         # Handle motor port communification
         self.port_handler = PortHandler(DEVICE_NAME)
-
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
         while True:
             try:
@@ -100,18 +87,18 @@ class MotorCoordinator(Node):
         self.ids = self.get_parameter('motor_ids').value
 
         self.declare_parameter('Control_Mode', 1)
-        self.mode = MotorMode(self.get_parameter('Control_Mode').value)
+        self.mode = self.get_parameter('Control_Mode').value
 
         for id in self.ids:
             self.toggle_on_off(id, 0)
-            self.set_mode(id, self.mode.value)
+            self.set_mode(id, self.mode)
             self.toggle_on_off(id, 1)
 
         self.addresses = {
             'toggle_mode': 11,
             'toggle_torque': 64,
-            MotorMode.POSITION: 116,
-            MotorMode.VELOCITY: 104,
+            'set_position': 116,
+            'set_velocity': 104,
             'get_pos': 132,
             'get_load': 126,
             'get_vel': 128,
@@ -171,77 +158,44 @@ class MotorCoordinator(Node):
         id = msg.id
         goal = -1 * msg.state
         success = False
-        match self.mode:
-            case MotorMode.VELOCITY:
-                deadzone = 0.3
-                if abs(goal) > deadzone:
-                    if goal > 0:
-                        goal = (goal - deadzone) / (1 - deadzone)
-                    if goal < 0:
-                        goal = (goal + deadzone) / (1 - deadzone)
-                    goal = int(goal**3 * 300)
-                    dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                        self.port_handler, id, ADDR_GOAL_VELOCITY, goal
-                    )
-                    if dxl_comm_result != COMM_SUCCESS:
-                        self.get_logger().error(
-                            f'Error: \
-                                                {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-                        )
-                    elif dxl_error != 0:
-                        self.get_logger().error(
-                            f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-                        )
-                    else:
-                        success = True
-                else:
-                    goal = 0
-                    dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                        self.port_handler, id, ADDR_GOAL_VELOCITY, goal
-                    )
-                    if dxl_comm_result != COMM_SUCCESS:
-                        self.get_logger().error(
-                            f'Error: \
-                                                {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-                        )
-                    elif dxl_error != 0:
-                        self.get_logger().error(
-                            f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-                        )
-                    else:
-                        success = 3  # Going to use 3 to mean goal was in deadzone
 
-            case MotorMode.POSITION:
-                dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                    self.port_handler, id, ADDR_GOAL_POSITION, goal
+        deadzone = 0.3
+        if abs(goal) > deadzone:
+            if goal > 0:
+                goal = (goal - deadzone) / (1 - deadzone)
+            if goal < 0:
+                goal = (goal + deadzone) / (1 - deadzone)
+            goal = int(goal**3 * 300)
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+                self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+            )
+            if dxl_comm_result != COMM_SUCCESS:
+                self.get_logger().error(
+                    f'Error: \
+                                        {self.packet_handler.getTxRxResult(dxl_comm_result)}'
                 )
-                if dxl_comm_result != COMM_SUCCESS:
-                    self.get_logger().error(
-                        f'Position Set Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-                    )
-                elif dxl_error != 0:
-                    self.get_logger().error(
-                        f'Position Set Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-                    )
-                else:
-                    success = True
-
-            case MotorMode.EXT_POSITION:
-                dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-                    self.port_handler, id, ADDR_GOAL_POSITION, goal
+            elif dxl_error != 0:
+                self.get_logger().error(
+                    f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
                 )
-                if dxl_comm_result != COMM_SUCCESS:
-                    self.get_logger().error(
-                        f'Position Set Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-                    )
-                elif dxl_error != 0:
-                    self.get_logger().error(
-                        f'Position Set Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-                    )
-                else:
-                    success = True
-            case MotorMode.PWM:
-                pass
+            else:
+                success = True
+        else:
+            goal = 0
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+                self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+            )
+            if dxl_comm_result != COMM_SUCCESS:
+                self.get_logger().error(
+                    f'Error: \
+                                        {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+                )
+            elif dxl_error != 0:
+                self.get_logger().error(
+                    f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+                )
+            else:
+                success = 3  # Going to use 3 to mean goal was in deadzone
 
         match success:
             case True:
