@@ -84,7 +84,7 @@ class MotorCoordinator(Node):
         self.get_logger().debug('Baudrate set')
 
         # Set motors to my settings
-        self.declare_parameter('motor_ids', [2, 3, 5])
+        self.declare_parameter('motor_ids', [1, 2, 3])
         self.ids = self.get_parameter('motor_ids').value
 
         self.declare_parameter('Control_Mode', 1)

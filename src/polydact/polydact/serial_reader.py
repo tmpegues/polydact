@@ -73,7 +73,7 @@ class SerialReader(Node):
         super().__init__('serial_reader')
 
         # Get motor list and initialize sensors
-        self.declare_parameter('motor_ids', [2, 3, 5])
+        self.declare_parameter('motor_ids', [1, 2, 3])
         motor_ids = self.get_parameter('motor_ids').value
         self.sensors = {}
         for id in motor_ids:
@@ -213,7 +213,7 @@ class SerialReader(Node):
                 motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
             self.goal_array_pub.publish(motor_states)
         else:
-            ids = [2, 3, 5]
+            ids = [1, 2, 3]
             self.goal_pub.publish(
                 MotorState(
                     id=self.sensors[ids[self.last_published]].id,
