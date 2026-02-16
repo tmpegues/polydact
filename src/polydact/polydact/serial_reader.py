@@ -82,6 +82,8 @@ class SerialReader(Node):
         # Set up serial port
         self.declare_parameter('serial_port', '/dev/ttyACM0')
         port = self.get_parameter('serial_port').value
+        self.get_logger().info(f'serial port: {port}')
+
         self.s_port = False
         while not self.s_port:
             try:
@@ -90,7 +92,7 @@ class SerialReader(Node):
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.calibration(500)
+        self.calibration(200)
 
         self.declare_parameter('array', False)
         self.array = self.get_parameter('array').value
