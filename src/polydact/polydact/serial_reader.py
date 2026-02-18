@@ -92,7 +92,7 @@ class SerialReader(Node):
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.calibration(200)
+        self.calibration(500)
 
         self.declare_parameter('array', False)
         self.array = self.get_parameter('array').value
