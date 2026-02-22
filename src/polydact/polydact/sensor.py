@@ -40,19 +40,23 @@ class Sensor:
 
         Returns
         -------
-         (float): The normalized rolling average of sensor readings.
+         (float): The normalized rolling average of sensor readings. If sensor is uncalibrated,
+                  0.0 will be returned (freezes the motors).
 
         """
-        value = sum(self.reads) / self.smoothing  # Average
-        value -= (self.max + self.min) / 2  # Center at 0
-        value /= (self.max - self.min) / 2  # Squash the values down to -1 to 1
+        if not self.calibrated:
+            return float(0.0)
+        else:
+            value = sum(self.reads) / self.smoothing  # Average
+            value -= (self.max + self.min) / 2  # Center at 0
+            value /= (self.max - self.min) / 2  # Squash the values down to -1 to 1
 
-        # If the max and min are off for some reason, clamp the values
-        if value > 1:
-            value = 1
-        elif value < -1:
-            value = -1
-        return float(value)
+            # If the max and min are off for some reason, clamp the values
+            if value > 1:
+                value = 1
+            elif value < -1:
+                value = -1
+            return float(value)
 
     def set_average(self):
         """Fill the reads list with a neutral value so motors initialize stopped."""

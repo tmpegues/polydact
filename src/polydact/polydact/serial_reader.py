@@ -77,6 +77,7 @@ class SerialReader(Node):
         self.min_max_calibration(num_points)
         self.map_sensor_to_motor()
 
+    # TODO: Can I pause the publishing timer while calibrating?
     def map_sensor_to_motor(self):
         """Change the assignment of which sensor controls which motor."""
         for id in self.sensors.keys():
@@ -120,7 +121,7 @@ class SerialReader(Node):
                         sensor.min = read
                     if sensor.calibrated >= num_points:
                         self.get_logger().info(
-                            f'Sensor {sensor.id} has all {num_points} min/max points collected.'
+                            f'Sensor {sensor.sensor_id} has all {num_points} min/max points collected.'
                         )
                         sensor.set_average()
                 else:
@@ -129,7 +130,7 @@ class SerialReader(Node):
                     )
         self.get_logger().info('Sensor min/max calibration complete:')
         for id, sensor in self.sensors.items():
-            self.get_logger().info(f'Sensor {sensor.id}: {sensor.min} - {sensor.max}')
+            self.get_logger().info(f'Sensor {sensor.sensor_id}: {sensor.min} - {sensor.max}')
 
     def get_line(self):
         """
@@ -175,7 +176,7 @@ class SerialReader(Node):
         ids = [1, 2, 3]  # self.sensors.keys() ?
         self.goal_pub.publish(
             MotorState(
-                id=self.sensors[ids[self.last_published]].id,
+                id=self.sensors[ids[self.last_published]].motor_id,
                 state=self.sensors[ids[self.last_published]].get_value(),
             )
         )

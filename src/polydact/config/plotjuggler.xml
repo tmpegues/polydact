@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <root>
- <tabbed_widget name="Main Window" parent="main_window">
+ <tabbed_widget parent="main_window" name="Main Window">
   <Tab containers="1" tab_name="tab1">
    <Container>
-    <DockSplitter orientation="-" count="1" sizes="1">
+    <DockSplitter sizes="1" count="1" orientation="-">
      <DockArea name="Individual Messages">
-      <plot flip_x="false" flip_y="false" style="LinesAndDots" mode="TimeSeries">
-       <range left="5.323655" bottom="-1.050000" right="10.323976" top="1.050000"/>
-       <limitY min="-1.05" max="1.05"/>
-       <curve name="Finger 1" color="#00ff00"/>
-       <curve name="Finger 3" color="#0000ff"/>
-       <curve name="Finger 2" color="#ffffff"/>
+      <plot style="LinesAndDots" flip_y="false" flip_x="false" mode="TimeSeries">
+       <range top="1.050000" left="30.378509" bottom="-1.050000" right="35.429199"/>
+       <limitY max="1.05" min="-1.05"/>
+       <curve color="#ff0000" name="Finger 1"/>
+       <curve color="#0000ff" name="Finger 3"/>
+       <curve color="#00ff00" name="Finger 2"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -60,81 +60,9 @@
  <previouslyLoaded_Streamer name="ROS2 Topic Subscriber"/>
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
-  <snippet name="Finger 3">
-   <global></global>
-   <function>if (v1 == 3) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger 2">
-   <global></global>
-   <function>if (v1 == 2) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger 1">
+  <snippet name="motor_2">
    <global></global>
    <function>if (v1 == 1) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>motor_2</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="5 Goal">
-   <global></global>
-   <function>if (v1 == 5) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal_array/states[2]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal_array/states[2]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="2 Goal">
-   <global></global>
-   <function>if (v1 == 2) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal_array/states[0]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal_array/states[0]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="3 Goal">
-   <global></global>
-   <function>if (v1 == 3) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal_array/states[1]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal_array/states[1]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="motor_5">
-   <global></global>
-   <function>if (v1 == 5) then
     return time, value
 else
     return {}
@@ -156,9 +84,81 @@ end</function>
     <v1>/motor_goal/id</v1>
    </additional_sources>
   </snippet>
-  <snippet name="motor_2">
+  <snippet name="motor_5">
+   <global></global>
+   <function>if (v1 == 5) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="3 Goal">
+   <global></global>
+   <function>if (v1 == 3) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal_array/states[1]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal_array/states[1]/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="2 Goal">
+   <global></global>
+   <function>if (v1 == 2) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal_array/states[0]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal_array/states[0]/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="5 Goal">
+   <global></global>
+   <function>if (v1 == 5) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal_array/states[2]/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal_array/states[2]/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger 1">
    <global></global>
    <function>if (v1 == 1) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>motor_2</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger 2">
+   <global></global>
+   <function>if (v1 == 2) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger 3">
+   <global></global>
+   <function>if (v1 == 3) then
     return time, value
 else
     return {}

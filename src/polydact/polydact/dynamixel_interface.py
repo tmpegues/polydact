@@ -1,0 +1,244 @@
+"""Interface with Dynmaixel SDK."""
+
+from dynamixel_sdk import COMM_SUCCESS
+from dynamixel_sdk import PacketHandler
+from dynamixel_sdk import PortHandler
+
+import serial
+
+
+# Control table address
+ADDR_OPERATING_MODE = 11  # Control table address is different in Dynamixel model
+ADDR_TORQUE_ENABLE = 64
+ADDR_GOAL_POSITION = 116
+ADDR_GOAL_VELOCITY = 104
+ADDR_PRESENT_POSITION = 132
+ADDR_PRESENT_LOAD = 126
+ADDR_PRESENT_VELOCITY = 128
+
+
+# Protocol version
+PROTOCOL_VERSION = 2.0  # Default Protocol version of DYNAMIXEL X series.
+
+# Default settings
+BAUDRATE = 57600  # Dynamixel default baudrate : 57600
+DEVICE_NAME = '/dev/ttyUSB0'  # Check which port is being used on your controller
+
+TORQUE_ENABLE = 1  # Value for enabling the torque
+TORQUE_DISABLE = 0  # Value for disabling the torque
+
+
+class DynamixelInterface():
+    """Hold the Dynamixel port handler, packet handler, and others."""
+
+    def __init__(self, node):
+        # Handle motor port communification
+        self.node = node
+        self.port_handler = PortHandler(DEVICE_NAME)
+        self.packet_handler = PacketHandler(PROTOCOL_VERSION)
+        while True:
+            try:
+                self.port_handler.openPort()
+                break
+            except FileNotFoundError:
+                self.node.get_logger().error(
+                    f'Dyn: Could not open port {DEVICE_NAME}. Is motor board in the correct port?',
+                    throttle_duration_sec=1,
+                )
+            except serial.SerialException:
+                self.node.get_logger().error(
+                    f'Dyn: Could not open port {DEVICE_NAME}. Is motor board in the correct port?',
+                    throttle_duration_sec=1,
+                )
+
+        if not self.port_handler.setBaudRate(BAUDRATE):
+            self.node.get_logger().error('Dyn: Could not set baudrate')
+            return
+        self.node.get_logger().debug('Dyn: Baudrate set')
+
+        self.addresses = {
+            'toggle_mode': 11,
+            'toggle_torque': 64,
+            'set_position': 116,
+            'set_velocity': 104,
+            'get_pos': 132,
+            'get_load': 126,
+            'get_vel': 128,
+        }
+
+    def send_velocity(self, id:int, goal:float):
+        """Write the velocity to the motor."""
+        success = False
+        dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+            self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            self.node.get_logger().error(
+                f'Dyn Error: \
+                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            self.node.get_logger().error(
+                f'Dyn Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+        else:
+            success = True
+
+        match success:
+            case True:
+                self.node.get_logger().debug(f'Motor {id}: Successfully set velocity goal to {goal}')
+            case False:
+                self.node.get_logger().debug(f'Motor {id}: Failed to set velocity goal to {goal}')
+
+
+    def send_on_off(self, id:int, new_state:int = 0):
+        """Write the active/inactive state to the motor."""
+        success = False
+
+        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
+            self.port_handler,
+            id,
+            ADDR_TORQUE_ENABLE,
+            new_state,
+        )
+
+        if dxl_comm_result != COMM_SUCCESS:
+            self.node.get_logger().error(f'Dyn: Was not able to toggle Motor {id}. on/off 1/0: {new_state}')
+
+        else:
+            success = True
+            self.node.get_logger().debug(f'Dyn: Was able to toggle motor on/off. on/off 1/0: {new_state}')
+
+        return success
+
+    def send_mode(self, id: int, mode: int) -> bool:
+        """
+        Set the control mode of the motor.
+
+        Args:
+        ----
+        id (int): The id of the motor to change the mode of
+        mode (int): 1, 3, 4, or 16 to set mode to velocity, position, extended position, or PWM
+
+        Returns
+        -------
+        (bool): True if the state was correctly set to the selected mode.
+
+        """
+        success = False
+        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
+            self.port_handler, id, ADDR_OPERATING_MODE, mode
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            self.node.get_logger().error(
+                f'Failed to set Control Mode {mode}: \
+                                    {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        else:
+            success = True
+            self.node.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
+        return success
+
+    def read_pos(self, id):
+        current_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_POSITION
+        )
+
+        if dxl_comm_result != COMM_SUCCESS:
+            current_position = False
+            self.node.get_logger().error(
+                f'Position Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            current_position = False
+            self.node.get_logger().error(
+                f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+        return current_position
+
+    def read_vel(self, id):
+        current_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_VELOCITY
+        )
+
+        if dxl_comm_result != COMM_SUCCESS:
+            current_velocity = False
+            self.node.get_logger().error(
+                f'Velocity Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            current_velocity = False
+            self.node.get_logger().error(
+                f'Velocity Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+        return current_velocity
+
+
+    def read_eff(self, id):
+        current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_LOAD
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            current_effort = False
+            self.node.get_logger().error(
+                f'Load Error: {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+        elif dxl_error != 0:
+            current_effort = False
+            self.node.get_logger().error(
+                f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+        return current_effort
+
+
+
+class Motor():
+    """Polydact motor class using Dynmaixel SDK."""
+
+    def __init__(self, interface: DynamixelInterface, id:int):
+
+        self.id = id
+        self.dyn = interface
+        self.pos = 0
+        self.vel = 0
+        self.eff = 0
+        # Initialize off
+        self.dyn.send_on_off(self.id, 1)
+        self.active = 1
+
+    def set_velocity(self, goal:float, deadzone:float):
+        """Set this motor's velocity to the proportional goal received here."""
+        if abs(goal) > deadzone:
+            if goal > 0:
+                goal = (goal - deadzone) / (1 - deadzone)
+            if goal < 0:
+                goal = (goal + deadzone) / (1 - deadzone)
+            goal = int(goal**3 * 300)
+        else:
+            goal = 0
+        success = self.dyn.send_velocity(self.id, goal)
+
+        match success:
+            case True:
+                self.dyn.node.get_logger().debug(f'Motor {id}: Successfully set {self.mode} goal to {goal}')
+            case False:
+                self.dynnode.get_logger().debug(f'Motor {id}: Failed to set {self.mode} goal to {goal}')
+
+    def set_mode(self, mode:int):
+        """Set the control mode of the motor.
+
+            Only velocity (mode 1) is usable.
+        """
+        success = self.dyn.send_on_off(0)
+        # Change the control mode
+        if success and mode != 0:
+            success = self.dyn.send_mode(self.id, mode)
+        # Turn torque back on and change state if mode was successfully changed
+        if success and mode != 0:
+            self.mode = self.mode
+            success = self.dyn.send_on_off(self.id, 1)
+
+    def get_state(self):
+        self.pos = self.dyn.read_pos
+        self.vel = self.dyn.read_vel
+        self.eff = self.dyn.read_eff
