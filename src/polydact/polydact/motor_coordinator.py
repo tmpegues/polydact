@@ -388,7 +388,7 @@ class MotorCoordinator(Node):
     def timer_callback(self):
         """Read and publish motor position, velocity, and load."""
         for id in self.ids:
-            self.pub_state(id, self.get_state(id))
+            pass  # self.pub_state(id, self.get_state(id))
 
     def __del__(self):
         """Turn off the motors and close port if the node is closed properly."""
