@@ -4,13 +4,13 @@
   <Tab tab_name="tab1" containers="1">
    <Container>
     <DockSplitter sizes="1" orientation="-" count="1">
-     <DockArea name="Individual Messages">
-      <plot style="LinesAndDots" flip_y="false" mode="TimeSeries" flip_x="false">
-       <range bottom="-1.050000" right="16.163546" left="11.171470" top="1.050000"/>
-       <limitY min="-1.05" max="1.05"/>
-       <curve color="#0000ff" name="Finger 3"/>
-       <curve color="#00ff00" name="Finger 2"/>
-       <curve color="#ff0000" name="Finger 1"/>
+     <DockArea name="...">
+      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
+       <range bottom="-0.831563" top="0.772004" left="29.900252" right="34.892399"/>
+       <limitY/>
+       <curve name="Finger_1" color="#ff0000"/>
+       <curve name="Finger_2" color="#00ff00"/>
+       <curve name="Finger_3" color="#0000ff"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -23,7 +23,7 @@
  <!-- - - - - - - - - - - - - - - -->
  <Plugins>
   <plugin ID="DataLoad CSV">
-   <parameters time_axis="" delimiter="0"/>
+   <parameters delimiter="0" time_axis=""/>
   </plugin>
   <plugin ID="DataLoad MCAP"/>
   <plugin ID="DataLoad ROS2 bags">
@@ -60,103 +60,31 @@
  <previouslyLoaded_Streamer name="ROS2 Topic Subscriber"/>
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
+  <snippet name="Finger_3">
+   <global></global>
+   <function>if (v1 == 3) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger_2">
+   <global></global>
+   <function>if (v1 == 2) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
   <snippet name="Finger_1">
-   <global></global>
-   <function>if (v1 == 1) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger 3">
-   <global></global>
-   <function>if (v1 == 3) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger 2">
-   <global></global>
-   <function>if (v1 == 2) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="5 Goal">
-   <global></global>
-   <function>if (v1 == 5) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal_array/states[2]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal_array/states[2]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="2 Goal">
-   <global></global>
-   <function>if (v1 == 2) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal_array/states[0]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal_array/states[0]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="3 Goal">
-   <global></global>
-   <function>if (v1 == 3) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal_array/states[1]/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal_array/states[1]/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="motor_5">
-   <global></global>
-   <function>if (v1 == 5) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="motor_3">
-   <global></global>
-   <function>if (v1 == 3) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="motor_2">
    <global></global>
    <function>if (v1 == 1) then
     return time, value
