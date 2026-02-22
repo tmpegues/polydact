@@ -5,64 +5,9 @@ from polydact_interfaces.msg import MotorStateArray
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
+from polydact.sensor import Sensor
 
 import serial
-
-
-class Sensor:
-    """Sensor class holds values for each individual sensor."""
-
-    def __init__(self, id):
-        """
-        Initialize the sensor.
-
-        Args:
-        ----
-        id (int): Which finger is this sensor on, and which motor does it control?
-
-        """
-        self.id = id
-        self.min = 10000.0
-        self.max = 0.0
-        self.smoothing = 10
-        self.reads = [0.0] * self.smoothing
-        self.calibrated = 0
-
-    def new_read(self, value: float):
-        """
-        Add the newest raw sensor reading to the rolling list.
-
-        Args:
-        ----
-        value (float): The new reading to add to the rolling list.
-
-        """
-        self.reads.append(value)
-        self.reads.pop(0)
-
-    def get_value(self) -> float:
-        """
-        Get the normalized rolling average of sensor readings.
-
-        Returns
-        -------
-         (float): The normalized rolling average of sensor readings.
-
-        """
-        value = sum(self.reads) / self.smoothing  # Average
-        value -= (self.max + self.min) / 2  # Center at 0
-        value /= (self.max - self.min) / 2  # Squash the values down to -1 to 1
-
-        # If the max and min are off for some reason, clamp the values
-        if value > 1:
-            value = 1
-        elif value < -1:
-            value = -1
-        return float(value)
-
-    def set_average(self):
-        """Fill the reads list with a neutral value so motors initialize stopped."""
-        self.reads = [(self.max + self.min) / 2] * self.smoothing
 
 
 class SerialReader(Node):
@@ -92,7 +37,7 @@ class SerialReader(Node):
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.calibration(500)
+        self.full_calibration(500)
 
         self.declare_parameter('array', False)
         self.array = self.get_parameter('array').value
@@ -114,8 +59,30 @@ class SerialReader(Node):
         self.publishing_timer = self.create_timer(
             int(1 / self.pub_freq), self.publishing_timer_callback
         )
+        self.get_logger().info('Serial Reader fully initialized')
 
-    def calibration(self, num_points: int):
+    def full_calibration(self, num_points: int):
+        """
+        Calibrate the glove by finding min and max flexes for all fingers, then remap to motors.
+
+        Args:
+        ----
+        num_points (int): How many points are to be collected for the min max calibration?
+
+        """
+        # 1st, all motors should be frozen
+        for id, sensor in self.sensors.items():
+            sensor.reset()
+
+        self.min_max_calibration(num_points)
+        self.map_sensor_to_motor()
+
+    def map_sensor_to_motor(self):
+        """Change the assignment of which sensor controls which motor."""
+        for id in self.sensors.keys():
+            self.get_logger().info(f'Wiggle the finger you want to use for motor {id}')
+
+    def min_max_calibration(self, num_points: int):
         """
         Read values from the connected sensors for a few seconds to determine ranges.
 
@@ -151,7 +118,6 @@ class SerialReader(Node):
                         sensor.max = read
                     elif read < sensor.min:
                         sensor.min = read
-
                     if sensor.calibrated >= num_points:
                         self.get_logger().info(
                             f'Sensor {sensor.id} has all {num_points} min/max points collected.'
@@ -161,7 +127,6 @@ class SerialReader(Node):
                     self.get_logger().error(
                         f'Unexpected condition in calibration. Serial line: {line}'
                     )
-
         self.get_logger().info('Sensor min/max calibration complete:')
         for id, sensor in self.sensors.items():
             self.get_logger().info(f'Sensor {sensor.id}: {sensor.min} - {sensor.max}')
@@ -204,27 +169,21 @@ class SerialReader(Node):
             self.sensors[line[0]].new_read(line[1])
 
     def publishing_timer_callback(self):
-        """Publish all motor goals."""
+        """Publish all motor goals individually."""
         self.get_logger().debug('Publishing Timer')
 
-        if self.array:
-            motor_states = MotorStateArray()
-            for sensor in self.sensors.values():
-                motor_states.states.append(MotorState(id=sensor.id, state=sensor.get_value()))
-            self.goal_array_pub.publish(motor_states)
-        else:
-            ids = [1, 2, 3]
-            self.goal_pub.publish(
-                MotorState(
-                    id=self.sensors[ids[self.last_published]].id,
-                    state=self.sensors[ids[self.last_published]].get_value(),
-                )
+        ids = [1, 2, 3]  # self.sensors.keys() ?
+        self.goal_pub.publish(
+            MotorState(
+                id=self.sensors[ids[self.last_published]].id,
+                state=self.sensors[ids[self.last_published]].get_value(),
             )
-            self.last_published += 1
-            self.last_published %= 3
-            # for sensor in self.sensors.values():
-            #     motor_state = MotorState(id=sensor.id, state=sensor.get_value())
-            #     self.goal_pub.publish(motor_state)
+        )
+        self.last_published += 1
+        self.last_published %= len(self.sensors)
+        # for sensor in self.sensors.values():
+        #     motor_state = MotorState(id=sensor.id, state=sensor.get_value())
+        #     self.goal_pub.publish(motor_state)
 
 
 def main(args=None):
