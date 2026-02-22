@@ -1,7 +1,6 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
 from polydact_interfaces.msg import MotorState
-from polydact_interfaces.msg import MotorStateArray
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
@@ -16,6 +15,13 @@ class SerialReader(Node):
     def __init__(self):
         """Initialize serial reader and goal publisher."""
         super().__init__('serial_reader')
+
+        # Creating publisher first to that PlotJuggler doesn't have to wait for calibration
+        self.goal_pub = self.create_publisher(
+            MotorState,
+            'motor_goal',
+            QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
+        )
 
         # Get motor list and initialize sensors
         self.declare_parameter('motor_ids', [1, 2, 3])
@@ -39,21 +45,15 @@ class SerialReader(Node):
         # Calibrate sensor min/max with specified number of readings from each sensor
         self.full_calibration(500)
 
-        self.declare_parameter('array', False)
-        self.array = self.get_parameter('array').value
-        self.goal_array_pub = self.create_publisher(MotorStateArray, 'motor_goal_array', 10)
-        self.goal_pub = self.create_publisher(
-            MotorState,
-            'motor_goal',
-            QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
-        )
+        # self.declare_parameter('array', False)
+        # self.array = self.get_parameter('array').value
+        # self.goal_array_pub = self.create_publisher(MotorStateArray, 'motor_goal_array', 10)
 
         # Begin publishing normalized sensor readings
         self.pub_freq = 100
         read_freq = 300
-        if not self.array:
-            self.last_published = 0
-            read_freq *= 3.1
+        self.last_published = 0
+        read_freq *= 3.1
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
         self.publishing_timer = self.create_timer(
@@ -121,7 +121,7 @@ class SerialReader(Node):
                         sensor.min = read
                     if sensor.calibrated >= num_points:
                         self.get_logger().info(
-                            f'Sensor {sensor.sensor_id} has all {num_points} min/max points collected.'
+                            f'Sensor {sensor.sensor_id} has all {num_points} min/max points read.'
                         )
                         sensor.set_average()
                 else:
