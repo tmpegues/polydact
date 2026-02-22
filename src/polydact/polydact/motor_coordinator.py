@@ -7,23 +7,23 @@ from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
 
 
 class MotorCoordinator(Node):
     """
-    Handler for Dynamixel motors.
+    MotorCoordinator is the intermediary between the control device (glove) and the motors.
 
     Publishers:
-        + "position" (std_msgs/msg/Int16) - The current position of the motor
-        + "velocity" (std_msgs/msg/Int16) - The current velocity of the motor
-        + "load" (std_msgs/msg/Int16) - The current load of the motor
+        + "motor_states" (sensor_msgs/msg/JointState) - Actual states of the motors
 
     Subscribers:
         + "motor_goal" (polydact_interfaces/msg/MotorState) - A goal to set a particular motor to
 
     Services:
         + "set_mode" (polydact_interfaces/srv/Mode) - What Control Mode to set the motor to.
-            (0 (off), 1 (vel)')
+            (0 (off), 1 (vel))
 
     Parameters
     ----------
@@ -57,6 +57,8 @@ class MotorCoordinator(Node):
             QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
         )
         self.mode_srv = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
+
+        self.motor_states_pub = self.create_publisher(JointState, 'motor_states', 10)
 
         self.posi_pub = self.create_publisher(MotorState, 'cur_position', 10)
         self.velo_pub = self.create_publisher(MotorState, 'cur_velocity', 10)
@@ -111,8 +113,17 @@ class MotorCoordinator(Node):
 
     def timer_callback(self):
         """Read and publish motor position, velocity, and load."""
-        for id in self.ids:
-            pass  # self.pub_state(id, self.get_state(id))
+        motor_states = JointState(header=Header(stamp=self.get_clock().now().to_msg()))
+
+        for motor in self.motors.values():
+            motor.get_state()
+            # TODO: Add some sort of checking for if the get_state fails
+            motor_states.name.append(str(motor.id))
+            motor_states.position.append(float(motor.position))
+            motor_states.velocity.append(float(motor.velocity))
+            motor_states.effort.append(float(motor.effort))
+
+        self.motor_states_pub.publish(motor_states)
 
 
 def main(args=None):

@@ -152,7 +152,7 @@ class DynamixelInterface:
             self.node.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
         return success
 
-    def read_pos(self, id: int) -> int:
+    def read_position(self, id: int) -> int:
         """
         Read the position of a specific motor.
 
@@ -181,7 +181,7 @@ class DynamixelInterface:
             )
         return current_position
 
-    def read_vel(self, id):
+    def read_velocity(self, id):
         """
         Read the velocity of a specific motor.
 
@@ -210,7 +210,7 @@ class DynamixelInterface:
             )
         return current_velocity
 
-    def read_eff(self, id):
+    def read_effort(self, id):
         """
         Read the effort of a specific motor.
 
@@ -255,9 +255,9 @@ class Motor:
         """
         self.id = id
         self.dyn = interface
-        self.pos = 0
-        self.vel = 0
-        self.eff = 0
+        self.position = 0
+        self.velocity = 0
+        self.effort = 0
         # Initialize off
         self.dyn.send_on_off(self.id, 1)
         self.active = 1
@@ -301,6 +301,6 @@ class Motor:
 
     def get_state(self):
         """Read the current position, velocity, and effort of the motor."""
-        self.pos = self.dyn.read_pos
-        self.vel = self.dyn.read_vel
-        self.eff = self.dyn.read_eff
+        self.position = self.dyn.read_position(self.id)
+        self.velocity = self.dyn.read_velocity(self.id)
+        self.effort = self.dyn.read_effort(self.id)
