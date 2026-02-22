@@ -19,7 +19,7 @@ index and middle fingers: teleport control point to pre-set positions
 
 Sensor attchment:
 
-* Flex sensors will measure angle of either MCP or PIP (palm to finger joint or middle knuckle)have two attachment points to the glove each.
+* Flex sensors will measure angle of either MCP or PIP (palm to finger joint or middle knuckle) have two attachment points to the glove each.
 1. Fixed attachment distal to the joint.
     * The pin side fo the flex sensor will be firmly attached to the glove here
     * Pinky abduction sensor will be across MCP

@@ -4,6 +4,7 @@
     * [XL430- W250 -T](https://robotis.us/dynamixel-xl430-w250-t/)
 
 
+
 | Motor        | Weight | Rated Torque | Steps | Standby | Stall        |
 |--------------|--------|--------------|-------|---------|--------------|
 |XC430-T240BB-T| 65 g   |0.38 Nm       |4096   |46 mA    |1.4 A, 1.9 Nm |
