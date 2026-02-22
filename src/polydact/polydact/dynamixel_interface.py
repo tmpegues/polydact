@@ -28,10 +28,18 @@ TORQUE_ENABLE = 1  # Value for enabling the torque
 TORQUE_DISABLE = 0  # Value for disabling the torque
 
 
-class DynamixelInterface():
+class DynamixelInterface:
     """Hold the Dynamixel port handler, packet handler, and others."""
 
     def __init__(self, node):
+        """
+        Initialize Dynamixel SDK port and packet handler.
+
+        Args:
+        ----
+        node (rclpy.Node): The node that this object is being used in. Used for logging.
+
+        """
         # Handle motor port communification
         self.node = node
         self.port_handler = PortHandler(DEVICE_NAME)
@@ -66,7 +74,7 @@ class DynamixelInterface():
             'get_vel': 128,
         }
 
-    def send_velocity(self, id:int, goal:float):
+    def send_velocity(self, id: int, goal: float):
         """Write the velocity to the motor."""
         success = False
         dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
@@ -86,12 +94,13 @@ class DynamixelInterface():
 
         match success:
             case True:
-                self.node.get_logger().debug(f'Motor {id}: Successfully set velocity goal to {goal}')
+                self.node.get_logger().debug(
+                    f'Motor {id}: Successfully set velocity goal to {goal}'
+                )
             case False:
                 self.node.get_logger().debug(f'Motor {id}: Failed to set velocity goal to {goal}')
 
-
-    def send_on_off(self, id:int, new_state:int = 0):
+    def send_on_off(self, id: int, new_state: int = 0):
         """Write the active/inactive state to the motor."""
         success = False
 
@@ -103,11 +112,15 @@ class DynamixelInterface():
         )
 
         if dxl_comm_result != COMM_SUCCESS:
-            self.node.get_logger().error(f'Dyn: Was not able to toggle Motor {id}. on/off 1/0: {new_state}')
+            self.node.get_logger().error(
+                f'Dyn: Was not able to toggle Motor {id}. on/off 1/0: {new_state}'
+            )
 
         else:
             success = True
-            self.node.get_logger().debug(f'Dyn: Was able to toggle motor on/off. on/off 1/0: {new_state}')
+            self.node.get_logger().debug(
+                f'Dyn: Was able to toggle motor on/off. on/off 1/0: {new_state}'
+            )
 
         return success
 
@@ -139,7 +152,19 @@ class DynamixelInterface():
             self.node.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
         return success
 
-    def read_pos(self, id):
+    def read_pos(self, id: int) -> int:
+        """
+        Read the position of a specific motor.
+
+        Args:
+        ----
+        id (int): The id of the motor to read from.
+
+        Returns
+        -------
+         (int): The current position of the motor
+
+        """
         current_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
             self.port_handler, id, ADDR_PRESENT_POSITION
         )
@@ -157,6 +182,18 @@ class DynamixelInterface():
         return current_position
 
     def read_vel(self, id):
+        """
+        Read the velocity of a specific motor.
+
+        Args:
+        ----
+        id (int): The id of the motor to read from.
+
+        Returns
+        -------
+         (int): The current velocity of the motor
+
+        """
         current_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
             self.port_handler, id, ADDR_PRESENT_VELOCITY
         )
@@ -173,8 +210,19 @@ class DynamixelInterface():
             )
         return current_velocity
 
-
     def read_eff(self, id):
+        """
+        Read the effort of a specific motor.
+
+        Args:
+        ----
+        id (int): The id of the motor to read from.
+
+        Returns
+        -------
+         (int): The current effort of the motor
+
+        """
         current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
             self.port_handler, id, ADDR_PRESENT_LOAD
         )
@@ -191,12 +239,20 @@ class DynamixelInterface():
         return current_effort
 
 
-
-class Motor():
+class Motor:
     """Polydact motor class using Dynmaixel SDK."""
 
-    def __init__(self, interface: DynamixelInterface, id:int):
+    def __init__(self, interface: DynamixelInterface, id: int):
+        """
+        Initialize a single motor.
 
+        Args:
+        ----
+        interface (DynamixelInterface): Contains the port and packet handler that will control this
+                                        motor.
+        id (int): The Dynamixel motor ID.
+
+        """
         self.id = id
         self.dyn = interface
         self.pos = 0
@@ -206,7 +262,7 @@ class Motor():
         self.dyn.send_on_off(self.id, 1)
         self.active = 1
 
-    def set_velocity(self, goal:float, deadzone:float):
+    def set_velocity(self, goal: float, deadzone: float):
         """Set this motor's velocity to the proportional goal received here."""
         if abs(goal) > deadzone:
             if goal > 0:
@@ -220,14 +276,19 @@ class Motor():
 
         match success:
             case True:
-                self.dyn.node.get_logger().debug(f'Motor {id}: Successfully set {self.mode} goal to {goal}')
+                self.dyn.node.get_logger().debug(
+                    f'Motor {id}: Successfully set {self.mode} goal to {goal}'
+                )
             case False:
-                self.dynnode.get_logger().debug(f'Motor {id}: Failed to set {self.mode} goal to {goal}')
+                self.dynnode.get_logger().debug(
+                    f'Motor {id}: Failed to set {self.mode} goal to {goal}'
+                )
 
-    def set_mode(self, mode:int):
-        """Set the control mode of the motor.
+    def set_mode(self, mode: int):
+        """
+        Set the control mode of the motor.
 
-            Only velocity (mode 1) is usable.
+        Only velocity (mode 1) is usable.
         """
         success = self.dyn.send_on_off(0)
         # Change the control mode
@@ -239,6 +300,7 @@ class Motor():
             success = self.dyn.send_on_off(self.id, 1)
 
     def get_state(self):
+        """Read the current position, velocity, and effort of the motor."""
         self.pos = self.dyn.read_pos
         self.vel = self.dyn.read_vel
         self.eff = self.dyn.read_eff
