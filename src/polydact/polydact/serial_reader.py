@@ -45,15 +45,12 @@ class SerialReader(Node):
         # Calibrate sensor min/max with specified number of readings from each sensor
         self.full_calibration(500)
 
-        # self.declare_parameter('array', False)
-        # self.array = self.get_parameter('array').value
-        # self.goal_array_pub = self.create_publisher(MotorStateArray, 'motor_goal_array', 10)
-
         # Begin publishing normalized sensor readings
         self.pub_freq = 100
         read_freq = 300
         self.last_published = 0
-        read_freq *= 3.1
+        # Make sure I'm reading slightly faster than serial is printing
+        read_freq *= len(self.sensors) + 0.1
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
         self.publishing_timer = self.create_timer(
@@ -173,18 +170,14 @@ class SerialReader(Node):
         """Publish all motor goals individually."""
         self.get_logger().debug('Publishing Timer')
 
-        ids = [1, 2, 3]  # self.sensors.keys() ?
         self.goal_pub.publish(
             MotorState(
-                id=self.sensors[ids[self.last_published]].motor_id,
-                state=self.sensors[ids[self.last_published]].get_value(),
+                id=self.sensors[list(self.sensors.keys())[self.last_published]].motor_id,
+                state=self.sensors[list(self.sensors.keys())[self.last_published]].get_value(),
             )
         )
         self.last_published += 1
         self.last_published %= len(self.sensors)
-        # for sensor in self.sensors.values():
-        #     motor_state = MotorState(id=sensor.id, state=sensor.get_value())
-        #     self.goal_pub.publish(motor_state)
 
 
 def main(args=None):
