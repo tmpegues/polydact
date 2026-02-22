@@ -2,7 +2,6 @@
     <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
     <arg name="motor_ids" default="[1, 2, 3]" description="list: ids of the motors you're connecting. If you're reading sensors, the ids should match the fingers your sensors are on (1 = thumb, 5 = pinky)"/>
     <arg name="control_mode" default="1" description="0, 1: Should the motors start up with torque off or on?"/>
-    <arg name="array" default="False" description="(bool) Publish motor goals from SerialReader node as a MotorStateArray (True) or as individual MotorStates"/>
     <arg name="plotter" default="True" description="(bool) Launch plotjuggler to view motor goal messages?"/>
     <arg name="motors" default="True" description="(bool) Run motors? If false, only the serial_reader will launch"/>
 
@@ -10,13 +9,11 @@
     <node pkg="polydact" exec="serial_reader" on_exit="shutdown">
         <param name="serial_port" value="$(var serial_port)"/>
         <param name="motor_ids" value="$(var motor_ids)"/>
-        <param name="array" value="$(var array)"/>
     </node>
 
     <node pkg="polydact" exec="motor_coordinator" on_exit="shutdown" if="$(var motors)">
         <param name="motor_ids" value="$(var motor_ids)"/>
         <param name="control_mode" value="$(var control_mode)"/>
-        <param name="array" value="$(var array)"/>
     </node>
 
     <node pkg="plotjuggler" exec="plotjuggler" args="-nl $(find-pkg-share polydact)/config/plotjuggler.xml" if="$(var plotter)"/>

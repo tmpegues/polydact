@@ -4,7 +4,8 @@ from dynamixel_sdk import COMM_SUCCESS
 from dynamixel_sdk import PacketHandler
 from dynamixel_sdk import PortHandler
 from polydact_interfaces.msg import MotorState
-from polydact_interfaces.msg import MotorStateArray
+
+# from polydact_interfaces.msg import MotorStateArray
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
@@ -105,9 +106,9 @@ class MotorCoordinator(Node):
             'get_vel': 128,
         }
 
-        self.goal_array_sub = self.create_subscription(
-            MotorStateArray, 'motor_goal_array', self.goal_array_cb, 10
-        )
+        # self.goal_array_sub = self.create_subscription(
+        #     MotorStateArray, 'motor_goal_array', self.goal_array_cb, 10
+        # )
 
         self.goal_sub = self.create_subscription(
             MotorState,
@@ -124,20 +125,20 @@ class MotorCoordinator(Node):
         self.timer = self.create_timer(1 / 100, self.timer_callback)
         self.get_logger().info('Motor Coordinator ready')
 
-    def goal_array_cb(self, state_array: MotorStateArray):
-        """
-        Set the goals for all motors contained in the MotorStateArray.
+    # def goal_array_cb(self, state_array: MotorStateArray):
+    #     """
+    #     Set the goals for all motors contained in the MotorStateArray.
 
-        Args:
-        ----
-        state_array (polydact_interfaces/msg/MotorStateArray): The MotorStates (id, state) to set
+    #     Args:
+    #     ----
+    #     state_array (polydact_interfaces/msg/MotorStateArray): The MotorStates (id, state) to set
 
-        """
-        self.get_logger().debug(
-            f'MotorStateArray received (len {len(state_array.states)} states) '
-        )
-        for state_msg in state_array.states:
-            self.set_single_goal(state_msg)
+    #     """
+    #     self.get_logger().debug(
+    #         f'MotorStateArray received (len {len(state_array.states)} states) '
+    #     )
+    #     for state_msg in state_array.states:
+    #         self.set_single_goal(state_msg)
 
     def set_single_goal(self, msg: MotorState):
         """
