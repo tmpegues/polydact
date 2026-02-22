@@ -1,6 +1,5 @@
 """Test different control modes of one Dynamixel motor."""
 
-
 from polydact.dynamixel_interface import Motor, DynamixelInterface
 from polydact_interfaces.msg import MotorState
 
@@ -9,7 +8,6 @@ from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
-import serial
 
 # # Control table address
 # ADDR_OPERATING_MODE = 11  # Control table address is different in Dynamixel model
@@ -152,9 +150,7 @@ class MotorCoordinator(Node):
                                                   msg.state is the goal to set to
 
         """
-        self.get_logger().debug(
-            f'MotorState {msg.id} {msg.state} received.)'
-        )
+        self.get_logger().debug(f'MotorState {msg.id} {msg.state} received.)')
         if msg.id not in self.motors.keys():
             self.get_logger().error(f'Unexpected motor id received: {msg}')
             return
@@ -164,7 +160,7 @@ class MotorCoordinator(Node):
         # success = False
 
         deadzone = 0.3
-        self.motors[msg.id].set_velocity(-1*msg.state, deadzone)
+        self.motors[msg.id].set_velocity(-1 * msg.state, deadzone)
 
         # if abs(goal) > deadzone:
         #     if goal > 0:
@@ -172,40 +168,36 @@ class MotorCoordinator(Node):
         #     if goal < 0:
         #         goal = (goal + deadzone) / (1 - deadzone)
         #     goal = int(goal**3 * 300)
-            # dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-            #     self.port_handler, id, ADDR_GOAL_VELOCITY, goal
-            # )
-            # if dxl_comm_result != COMM_SUCCESS:
-            #     self.get_logger().error(
-            #         f'Error: \
-            #                             {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            #     )
-            # elif dxl_error != 0:
-            #     self.get_logger().error(
-            #         f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-            #     )
-            # else:
-            #     success = True
+        # dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+        #     self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+        # )
+        # if dxl_comm_result != COMM_SUCCESS:
+        #     self.get_logger().error(
+        #         f'Error: \
+        #                             {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+        #     )
+        # elif dxl_error != 0:
+        #     self.get_logger().error(
+        #         f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+        #     )
+        # else:
+        #     success = True
         # else:
         #     goal = 0
-            # dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-            #     self.port_handler, id, ADDR_GOAL_VELOCITY, goal
-            # )
-            # if dxl_comm_result != COMM_SUCCESS:
-            #     self.get_logger().error(
-            #         f'Error: \
-            #                             {self.packet_handler.getTxRxResult(dxl_comm_result)}'
-            #     )
-            # elif dxl_error != 0:
-            #     self.get_logger().error(
-            #         f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
-            #     )
-            # else:
-            #     success = True
-
-
-
-
+        # dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+        #     self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+        # )
+        # if dxl_comm_result != COMM_SUCCESS:
+        #     self.get_logger().error(
+        #         f'Error: \
+        #                             {self.packet_handler.getTxRxResult(dxl_comm_result)}'
+        #     )
+        # elif dxl_error != 0:
+        #     self.get_logger().error(
+        #         f'Error: {self.packet_handler.getRxPacketError(dxl_error)}'
+        #     )
+        # else:
+        #     success = True
 
     def switch_mode_cb(self, request, response):
         """
@@ -270,7 +262,7 @@ class MotorCoordinator(Node):
     #     )
 
     #     if dxl_comm_result != COMM_SUCCESS:
-    #         self.get_logger().error(f'Was not able to toggle Motor {id}. on/off 1/0: {new_state}')
+    #        self.get_logger().error(f'Was not able to toggle Motor {id}. on/off 1/0: {new_state}')
 
     #     else:
     #         success = True
