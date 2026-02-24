@@ -119,9 +119,9 @@ class MotorCoordinator(Node):
             motor.get_state()
             # TODO: Add some sort of checking for if the get_state fails
             motor_states.name.append(str(motor.id))
-            motor_states.position.append(float(motor.position))
-            motor_states.velocity.append(float(motor.velocity))
-            motor_states.effort.append(float(motor.effort))
+            motor_states.position.append(motor.position)
+            motor_states.velocity.append(motor.velocity)
+            motor_states.effort.append(motor.effort)
 
         self.motor_states_pub.publish(motor_states)
 

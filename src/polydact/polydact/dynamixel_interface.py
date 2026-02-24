@@ -13,7 +13,8 @@ ADDR_TORQUE_ENABLE = 64
 ADDR_GOAL_POSITION = 116
 ADDR_GOAL_VELOCITY = 104
 ADDR_PRESENT_POSITION = 132
-ADDR_PRESENT_LOAD = 126
+ADDR_PRESENT_PWM = 124
+ADDR_PRESENT_CURRENT = 126
 ADDR_PRESENT_VELOCITY = 128
 
 
@@ -179,6 +180,7 @@ class DynamixelInterface:
             self.node.get_logger().error(
                 f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
+        self.node.get_logger().debug(f'DYN: Motor {id} position {current_position}')
         return current_position
 
     def read_velocity(self, id):
@@ -224,7 +226,7 @@ class DynamixelInterface:
 
         """
         current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, id, ADDR_PRESENT_LOAD
+            self.port_handler, id, ADDR_PRESENT_CURRENT
         )
         if dxl_comm_result != COMM_SUCCESS:
             current_effort = False
@@ -236,6 +238,12 @@ class DynamixelInterface:
             self.node.get_logger().error(
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
+        self.node.get_logger().debug(f'DYN: Motor {id} current {current_effort}')
+        current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
+            self.port_handler, id, ADDR_PRESENT_PWM
+        )
+        self.node.get_logger().debug(f'DYN: Motor {id} pwm {current_effort}')
+
         return current_effort
 
 
@@ -280,7 +288,7 @@ class Motor:
                     f'Motor {id}: Successfully set {self.mode} goal to {goal}'
                 )
             case False:
-                self.dynnode.get_logger().debug(
+                self.dyn.node.get_logger().debug(
                     f'Motor {id}: Failed to set {self.mode} goal to {goal}'
                 )
 
@@ -304,3 +312,7 @@ class Motor:
         self.position = self.dyn.read_position(self.id)
         self.velocity = self.dyn.read_velocity(self.id)
         self.effort = self.dyn.read_effort(self.id)
+
+        self.dyn.node.get_logger().debug(f'Motor {self.id} position {self.position}')
+        self.dyn.node.get_logger().debug(f'Motor {self.id} velocity  {self.velocity}')
+        self.dyn.node.get_logger().debug(f'Motor {self.id} effort  {self.effort}')
