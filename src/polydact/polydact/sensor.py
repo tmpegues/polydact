@@ -4,18 +4,18 @@
 class Sensor:
     """Sensor class holds values for each individual sensor."""
 
-    def __init__(self, id):
+    def __init__(self, sensor_id, motor_id):
         """
         Initialize the sensor.
 
         Args:
         ----
-        id (int): Which finger is this sensor on, and which motor does it control?
-            This assumes that ids will match, but the sensor id to motor id mapping can be changed.
+        sensor_id (int): Which sensor is this? My finger map is 1 = ring, 2 = middle, 3 = index.
+        motor_id (int): What is the Dynamixel ID of the motor that this sensor will control?
 
         """
-        self.sensor_id = id
-        self.motor_id = id
+        self.sensor_id = sensor_id
+        self.motor_id = motor_id
         self.min = 10000.0
         self.max = 0.0
         self.smoothing = 10

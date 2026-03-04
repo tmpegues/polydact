@@ -1,6 +1,7 @@
 <launch>
     <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
-    <arg name="motor_ids" default="[1, 2, 3]" description="list: ids of the motors you're connecting. If you're reading sensors, the ids should match the fingers your sensors are on (1 = thumb, 5 = pinky)"/>
+    <arg name="motor_ids" default="[1, 2, 3]" description="list: Dynamixel IDs of the motors you're connecting. Order maps to sensor_ids order."/>
+    <arg name="sensor_ids" default = "[1, 2, 3]" description="list: IDs of the glove sensors. I use 1 = ring finger, 2 = middle finger, 3 = index finger. Order maps to motor_ids order.">
     <arg name="control_mode" default="1" description="0, 1: Should the motors start up with torque off or on?"/>
     <arg name="plotter" default="True" description="(bool) Launch plotjuggler to view motor goal messages?"/>
     <arg name="motors" default="True" description="(bool) Run motors? If false, only the serial_reader will launch"/>

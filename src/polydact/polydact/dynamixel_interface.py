@@ -267,8 +267,8 @@ class Motor:
         self.velocity = 0
         self.effort = 0
         # Initialize off
-        self.dyn.send_on_off(self.id, 1)
-        self.active = 1
+        self.dyn.send_on_off(self.id, 0)
+        self.active = 0
 
     def set_velocity(self, goal: float, deadzone: float):
         """Set this motor's velocity to the proportional goal received here."""
@@ -292,20 +292,38 @@ class Motor:
                     f'Motor {id}: Failed to set {self.mode} goal to {goal}'
                 )
 
+    def set_off(self):
+        """
+        Turn the motor off.
+
+        No specific function is given to turn them back on. To turn motors back on, set the mode.
+
+        Returns
+        -------
+        (bool): Was the motor succesfully turned off?
+
+        """
+        success = self.dyn.send_on_off(self.id, 0)
+        if success:
+            self.active = 0
+        return success
+
     def set_mode(self, mode: int):
         """
         Set the control mode of the motor.
 
         Only velocity (mode 1) is usable.
         """
-        success = self.dyn.send_on_off(0)
+        success = self.set_off()
         # Change the control mode
         if success and mode != 0:
             success = self.dyn.send_mode(self.id, mode)
         # Turn torque back on and change state if mode was successfully changed
         if success and mode != 0:
-            self.mode = self.mode
+            self.mode = mode
             success = self.dyn.send_on_off(self.id, 1)
+        if success:
+            self.active = 1
 
     def get_state(self):
         """Read the current position, velocity, and effort of the motor."""

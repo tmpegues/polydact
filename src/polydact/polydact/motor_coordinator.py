@@ -50,6 +50,11 @@ class MotorCoordinator(Node):
         for id in self.ids:
             self.motors.update({id: Motor(self.dyn, id)})
 
+        # Motors should initialize off, but loop through just to be sure
+        # Should probably ad a check to make sure they're actually all off
+        for motor in self.motors.values():
+            motor.set_off(0)
+
         self.goal_sub = self.create_subscription(
             MotorState,
             'motor_goal',
@@ -69,7 +74,7 @@ class MotorCoordinator(Node):
 
     def set_single_goal(self, msg: MotorState):
         """
-        Set the position, velocity, or PWM goal for the motor.
+        Set the position, velocity, or PWM goal for a single motor.
 
         Args:
         ----

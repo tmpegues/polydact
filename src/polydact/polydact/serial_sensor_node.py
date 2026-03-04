@@ -1,6 +1,7 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
 from polydact_interfaces.msg import MotorState
+from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
@@ -24,11 +25,15 @@ class SerialReader(Node):
         )
 
         # Get motor list and initialize sensors
+        self.declare_parameter('sensor_ids', [1, 2, 3])
+        sensor_ids = self.get_parameter('sensor_ids').value
+
         self.declare_parameter('motor_ids', [1, 2, 3])
-        motor_ids = self.get_parameter('motor_ids').value
+        self.motor_ids = self.get_parameter('motor_ids').value
+
         self.sensors = {}
-        for id in motor_ids:
-            self.sensors.update({id: Sensor(id)})
+        for sensor_id, motor_id in zip(sensor_ids, self.motor_ids):
+            self.sensors.update({sensor_id: Sensor(sensor_id, motor_id)})
 
         # Set up serial port
         self.declare_parameter('serial_port', '/dev/ttyACM0')
@@ -41,6 +46,11 @@ class SerialReader(Node):
                 self.s_port = serial.Serial(port, 115200, timeout=10)
             except serial.SerialException:
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
+
+        self.set_mode_client = self.create_client(Mode, 'set_mode')
+        if not self.set_mode_client.wait_for_service(timeout_set=5.0):
+            self.get_logger().error('Failed to find Mode ("set_mode") service')
+            raise RuntimeError('Failed to find Mode ("set_mode") service')
 
         # Calibrate sensor min/max with specified number of readings from each sensor
         self.full_calibration(500)
@@ -74,11 +84,42 @@ class SerialReader(Node):
         self.min_max_calibration(num_points)
         self.map_sensor_to_motor()
 
-    # TODO: Can I pause the publishing timer while calibrating?
+    # TODO: Can I pause the publishing timer while calibrating? Doesn't really matter, since I set
+    # mode to off at the beginning of this function.
     def map_sensor_to_motor(self):
         """Change the assignment of which sensor controls which motor."""
-        for id in self.sensors.keys():
-            self.get_logger().info(f'Wiggle the finger you want to use for motor {id}')
+        # Service to set mode off
+        success = False
+        while not success:
+            success = self.set_mode_client.call_async(Mode.Request(mode=0))
+
+        for motor in self.motor_ids:
+            for sensor_id, sensor in self.sensors.keys():
+                if sensor.motor_id == motor:
+                    self.get_logger().info(
+                        f'Motor {motor} is currently assigned to sensor {sensor_id}'
+                    )
+                    self.get_logger().info(f'Bend the sensor to use with motor {motor} (1 second)')
+                    max_bent = 0
+                    while True:
+                        # Read for 1 second, find max bent sensor
+                        max_bent = 0
+                        self.get_logger().info(f'Sensor {max_bent} selected for {motor}')
+                        self.get_logger().info(f'Keep sensor {max_bent} bent to confirm selection')
+                        # Read for another second
+                        max_bent2 = 0
+                        if max_bent2 == max_bent:
+                            break
+                        else:
+                            self.get_logger().info(
+                                f'1st sensor {max_bent} and 2nd sensor {max_bent2} do not match.'
+                            )
+                else:
+                    pass
+
+        success = False
+        while not success:
+            success = self.set_mode_client.call_async(Mode.Request(mode=1))
 
     def min_max_calibration(self, num_points: int):
         """
