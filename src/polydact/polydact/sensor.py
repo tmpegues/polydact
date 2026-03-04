@@ -58,7 +58,7 @@ class Sensor:
                 value = -1
             return float(value)
 
-    def set_average(self):
+    def fill_average(self):
         """Fill the reads list with a neutral value so motors initialize stopped."""
         self.reads = [(self.max + self.min) / 2] * self.smoothing
 

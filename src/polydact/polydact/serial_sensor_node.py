@@ -48,12 +48,12 @@ class SerialReader(Node):
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         self.set_mode_client = self.create_client(Mode, 'set_mode')
-        if not self.set_mode_client.wait_for_service(timeout_set=5.0):
+        if not self.set_mode_client.wait_for_service(timeout_sec=5.0):
             self.get_logger().error('Failed to find Mode ("set_mode") service')
             raise RuntimeError('Failed to find Mode ("set_mode") service')
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.full_calibration(500)
+        self.min_max_calibration(500)
 
         # Begin publishing normalized sensor readings
         self.pub_freq = 100
@@ -77,49 +77,100 @@ class SerialReader(Node):
         num_points (int): How many points are to be collected for the min max calibration?
 
         """
-        # 1st, all motors should be frozen
-        for id, sensor in self.sensors.items():
-            sensor.reset()
+        self.freeze(True)
 
         self.min_max_calibration(num_points)
         self.map_sensor_to_motor()
 
-    # TODO: Can I pause the publishing timer while calibrating? Doesn't really matter, since I set
-    # mode to off at the beginning of this function.
+        self.freeze(False)
+
+    def freeze(self, freeze: bool):
+        """
+        Stop all motors by pausing timer, then sending Goal = 0.
+
+        Args:
+        ----
+        freeze (bool): True will stop motors, False will turn velocity control back on
+
+        """
+        match freeze:
+            case True:
+                self.publishing_timer.cancel()
+                for motor_id in self.motor_ids:
+                    self.goal_pub.publish(MotorState(id=motor_id, state=0))
+            case False:
+                for sensor in self.sensors.values():
+                    sensor.fill_average()
+                self.publishing_timer.reset()
+
     def map_sensor_to_motor(self):
         """Change the assignment of which sensor controls which motor."""
-        # Service to set mode off
-        success = False
-        while not success:
-            success = self.set_mode_client.call_async(Mode.Request(mode=0))
+        self.freeze(True)
+        retry = True
+        while retry:
+            retry = False
+            # Clear motor ids for all sensors
+            for sensor in self.sensors.values():
+                sensor.motor_id = -1
 
-        for motor in self.motor_ids:
-            for sensor_id, sensor in self.sensors.keys():
-                if sensor.motor_id == motor:
-                    self.get_logger().info(
-                        f'Motor {motor} is currently assigned to sensor {sensor_id}'
-                    )
+            # Cycle through motors again, setting sensors as we go
+            for motor in self.motor_ids:
+                self.get_logger().info(f'Motor: {motor}')
+                while True:
                     self.get_logger().info(f'Bend the sensor to use with motor {motor} (1 second)')
-                    max_bent = 0
-                    while True:
-                        # Read for 1 second, find max bent sensor
-                        max_bent = 0
-                        self.get_logger().info(f'Sensor {max_bent} selected for {motor}')
-                        self.get_logger().info(f'Keep sensor {max_bent} bent to confirm selection')
-                        # Read for another second
-                        max_bent2 = 0
-                        if max_bent2 == max_bent:
-                            break
-                        else:
-                            self.get_logger().info(
-                                f'1st sensor {max_bent} and 2nd sensor {max_bent2} do not match.'
-                            )
-                else:
-                    pass
+                    # Read for 1 second, find max bent sensor
+                    sensor1 = 0
+                    self.get_logger().info(f'Sensor {sensor1} selected for {motor}')
+                    self.get_logger().info(f'Keep sensor {sensor1} bent to confirm selection')
+                    # Read for another second
+                    sensor2 = 0
+                    # If the sensors match and that sensor doesn't have a motor saved yet, save
+                    if sensor1 == sensor2 and self.sensors[sensor1].motor_id == -1:
+                        self.sensors[sensor1].motor_id = motor
+                        self.get_logger().info(f'Saving: Sensor {sensor1} maps to motor {motor}')
+                        break
+                    elif sensor1 != sensor2:
+                        self.get_logger().error(
+                            f'1st sensor {sensor1} and 2nd sensor {sensor2} do not match.'
+                        )
+                    elif self.sensors[sensor1].motor_id != -1:
+                        self.get_logger().error(
+                            f'Sensor {sensor1} already assigned: {self.sensors[sensor1].motor_id}.'
+                        )
+                    self.get_logger().info(f'Retrying. Motor = {motor}.')
 
-        success = False
-        while not success:
-            success = self.set_mode_client.call_async(Mode.Request(mode=1))
+            # Check that each sensor has a motor (id != -1) and that each motor is unique
+            motor_list = self.motor_ids.copy()
+            for s_id, sensor in self.sensors.items():
+                if sensor.motor_id == -1:
+                    retry = True
+                    self.get_logger().error(f'Sensor {s_id} was not assigned a motor')
+                    break
+                elif sensor.motor_id in motor_list:
+                    self.get_logger().info(f'Sensor {s_id} is assigned to motor {sensor.motor_id}')
+                    motor_list.remove(sensor.motor_id)
+                elif sensor.motor_id not in motor_list:
+                    retry = True
+                    self.get_logger().error(
+                        f'Sensor {s_id} is assigned to motor {sensor.motor_id}'
+                    )
+                    self.get_logger().error('This motor is already  assigned or is invalid ID.')
+                    break
+                else:
+                    self.get_logger().error(f'Unexpected case. S: {s_id}, M: {sensor.motor_id}')
+
+            # Check that each motor was assigned
+            if len(motor_list) != 0:
+                retry = True
+                self.get_logger().error(f'Motors unassigned: {motor_list}.')
+
+            if retry:
+                self.get_logger().info('Retrying remapping.')
+            else:
+                self.get_logger().info('Remapping complete:')
+                for sensor in self.sensors.values():
+                    self.get_logger().info(f'Sensor {sensor.sensor_id} -> Motor {sensor.motor_id}')
+                self.freeze(False)
 
     def min_max_calibration(self, num_points: int):
         """
@@ -161,7 +212,7 @@ class SerialReader(Node):
                         self.get_logger().info(
                             f'Sensor {sensor.sensor_id} has all {num_points} min/max points read.'
                         )
-                        sensor.set_average()
+                        sensor.fill_average()
                 else:
                     self.get_logger().error(
                         f'Unexpected condition in calibration. Serial line: {line}'
