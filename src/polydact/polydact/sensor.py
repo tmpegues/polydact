@@ -18,6 +18,8 @@ class Sensor:
         self.motor_id = motor_id
         self.min = 10000.0
         self.max = 0.0
+        self.selector_min = 0.0
+        self.selector_max = 0.0
         self.smoothing = 10
         self.reads = [0.0] * self.smoothing
         self.calibrated = 0

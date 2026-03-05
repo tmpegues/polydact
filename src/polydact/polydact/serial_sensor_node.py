@@ -84,28 +84,83 @@ class SerialReader(Node):
 
         self.freeze(False)
 
-    def freeze(self, freeze: bool):
+    def freeze(self, freeze_on: bool, read: bool = False):
         """
         Stop all motors by pausing timer, then sending Goal = 0.
 
+        Saving of sensor values can also be paused optionally, but unfreezing will always restart
+        sensor saving.
+
         Args:
         ----
-        freeze (bool): True will stop motors, False will turn velocity control back on
+        freeze_on (bool): True will stop motors, False will turn velocity control back on
+        read (bool): True will also top lines from being saved, which is used for remapping.
 
         """
-        match freeze:
+        match freeze_on:
             case True:
+                if read:
+                    self.reading_timer.cancel()
                 self.publishing_timer.cancel()
                 for motor_id in self.motor_ids:
                     self.goal_pub.publish(MotorState(id=motor_id, state=0))
+
             case False:
                 for sensor in self.sensors.values():
                     sensor.fill_average()
                 self.publishing_timer.reset()
+                self.reading_timer.reset()
+
+    def get_max_diff(self, reads: int = 100) -> int:
+        """
+        Get the ID of the sensor that gets bent the most over the next selected no of serial lines.
+
+        Args:
+        ----
+        reads (int): How many serial lines to read. Not how many per sensor.
+
+        Returns
+        -------
+         (int): The ID of the sensor that experienced the largest bend. -1 means there was an issue
+
+        """
+        # Clear the saved selector values
+        for sensor in self.sensors.values():
+            sensor.selector_min = 10000
+            sensor.selector_max = -10000
+
+        i = 0
+        # Read the selected total number of lines
+        while i <= reads:
+            line = self.get_line()
+            if line:
+                id, read = line
+                if id not in self.sensors:
+                    self.get_logger().error(f'Sensor message id {id} is not valid id.')
+                    break
+                sensor = self.sensors[id]
+                if read > sensor.selector_max:
+                    sensor.selector_max = read
+                elif read < sensor.selector_min:
+                    sensor.selector_min = read
+                else:
+                    self.get_logger().error(
+                        f'Unexpected condition in sensor remapping. Serial line: {line}'
+                    )
+
+        # Now that lines are read, determine which sensor has been flexed the most
+        diff = 0
+        max_bent = -1
+        for id, sensor in self.sensors.items():
+            if abs(sensor.selector_max - sensor.selector_min) > diff:
+                diff = sensor.selector_max - sensor.selector_min
+                max_bent = id
+
+        return max_bent
 
     def map_sensor_to_motor(self):
         """Change the assignment of which sensor controls which motor."""
-        self.freeze(True)
+        self.freeze(True, True)
         retry = True
         while retry:
             retry = False
@@ -117,13 +172,13 @@ class SerialReader(Node):
             for motor in self.motor_ids:
                 self.get_logger().info(f'Motor: {motor}')
                 while True:
-                    self.get_logger().info(f'Bend the sensor to use with motor {motor} (1 second)')
-                    # Read for 1 second, find max bent sensor
-                    sensor1 = 0
+                    self.get_logger().info(f'Wiggle the sensor to use with motor {motor}')
+                    # Read for 100 values, find max bent sensor
+                    sensor1 = self.get_max_diff(100)
                     self.get_logger().info(f'Sensor {sensor1} selected for {motor}')
-                    self.get_logger().info(f'Keep sensor {sensor1} bent to confirm selection')
-                    # Read for another second
-                    sensor2 = 0
+                    self.get_logger().info(f'Keep wiggling sensor {sensor1} to confirm selection')
+                    # Read another 100, check for match
+                    sensor2 = self.get_max_diff(100)
                     # If the sensors match and that sensor doesn't have a motor saved yet, save
                     if sensor1 == sensor2 and self.sensors[sensor1].motor_id == -1:
                         self.sensors[sensor1].motor_id = motor
@@ -142,18 +197,15 @@ class SerialReader(Node):
             # Check that each sensor has a motor (id != -1) and that each motor is unique
             motor_list = self.motor_ids.copy()
             for s_id, sensor in self.sensors.items():
-                if sensor.motor_id == -1:
+                if sensor.motor_id in motor_list:  # This case is what we want
+                    self.get_logger().info(f'Sensor {s_id} is assigned to motor {sensor.motor_id}')
+                    motor_list.remove(sensor.motor_id)
+                elif sensor.motor_id == -1:
                     retry = True
                     self.get_logger().error(f'Sensor {s_id} was not assigned a motor')
                     break
-                elif sensor.motor_id in motor_list:
-                    self.get_logger().info(f'Sensor {s_id} is assigned to motor {sensor.motor_id}')
-                    motor_list.remove(sensor.motor_id)
                 elif sensor.motor_id not in motor_list:
                     retry = True
-                    self.get_logger().error(
-                        f'Sensor {s_id} is assigned to motor {sensor.motor_id}'
-                    )
                     self.get_logger().error('This motor is already  assigned or is invalid ID.')
                     break
                 else:
@@ -255,7 +307,7 @@ class SerialReader(Node):
     def reading_timer_callback(self):
         """Read the serial monitor."""
         line = self.get_line()
-        if line:
+        if line and line[0] in self.sensors.keys():
             self.sensors[line[0]].new_read(line[1])
 
     def publishing_timer_callback(self):
