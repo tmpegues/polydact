@@ -75,11 +75,11 @@ class DynamixelInterface:
             'get_vel': 128,
         }
 
-    def send_velocity(self, id: int, goal: float):
+    def send_velocity(self, motor_id: int, goal: float):
         """Write the velocity to the motor."""
         success = False
         dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
-            self.port_handler, id, ADDR_GOAL_VELOCITY, goal
+            self.port_handler, motor_id, ADDR_GOAL_VELOCITY, goal
         )
         if dxl_comm_result != COMM_SUCCESS:
             self.node.get_logger().error(
@@ -96,25 +96,27 @@ class DynamixelInterface:
         match success:
             case True:
                 self.node.get_logger().debug(
-                    f'Motor {id}: Successfully set velocity goal to {goal}'
+                    f'Motor {motor_id}: Successfully set velocity goal to {goal}'
                 )
             case False:
-                self.node.get_logger().debug(f'Motor {id}: Failed to set velocity goal to {goal}')
+                self.node.get_logger().debug(
+                    f'Motor {motor_id}: Failed to set velocity goal to {goal}'
+                )
 
-    def send_on_off(self, id: int, new_state: int = 0):
+    def send_on_off(self, motor_id: int, new_state: int = 0):
         """Write the active/inactive state to the motor."""
         success = False
 
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
             self.port_handler,
-            id,
+            motor_id,
             ADDR_TORQUE_ENABLE,
             new_state,
         )
 
         if dxl_comm_result != COMM_SUCCESS:
             self.node.get_logger().error(
-                f'Dyn: Was not able to toggle Motor {id}. on/off 1/0: {new_state}'
+                f'Dyn: Was not able to toggle Motor {motor_id}. on/off 1/0: {new_state}'
             )
 
         else:
@@ -125,13 +127,13 @@ class DynamixelInterface:
 
         return success
 
-    def send_mode(self, id: int, mode: int) -> bool:
+    def send_mode(self, motor_id: int, mode: int) -> bool:
         """
         Set the control mode of the motor.
 
         Args:
         ----
-        id (int): The id of the motor to change the mode of
+        motor_id (int): The motor_id of the motor to change the mode of
         mode (int): 1, 3, 4, or 16 to set mode to velocity, position, extended position, or PWM
 
         Returns
@@ -141,7 +143,7 @@ class DynamixelInterface:
         """
         success = False
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
-            self.port_handler, id, ADDR_OPERATING_MODE, mode
+            self.port_handler, motor_id, ADDR_OPERATING_MODE, mode
         )
         if dxl_comm_result != COMM_SUCCESS:
             self.node.get_logger().error(
@@ -153,13 +155,13 @@ class DynamixelInterface:
             self.node.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
         return success
 
-    def read_position(self, id: int) -> int:
+    def read_position(self, motor_id: int) -> int:
         """
         Read the position of a specific motor.
 
         Args:
         ----
-        id (int): The id of the motor to read from.
+        motor_id (int): The motor_id of the motor to read from.
 
         Returns
         -------
@@ -167,7 +169,7 @@ class DynamixelInterface:
 
         """
         current_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, id, ADDR_PRESENT_POSITION
+            self.port_handler, motor_id, ADDR_PRESENT_POSITION
         )
 
         if dxl_comm_result != COMM_SUCCESS:
@@ -180,16 +182,16 @@ class DynamixelInterface:
             self.node.get_logger().error(
                 f'Position Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
-        self.node.get_logger().debug(f'DYN: Motor {id} position {current_position}')
+        self.node.get_logger().debug(f'DYN: Motor {motor_id} position {current_position}')
         return current_position
 
-    def read_velocity(self, id):
+    def read_velocity(self, motor_id):
         """
         Read the velocity of a specific motor.
 
         Args:
         ----
-        id (int): The id of the motor to read from.
+        motor_id (int): The motor_id of the motor to read from.
 
         Returns
         -------
@@ -197,7 +199,7 @@ class DynamixelInterface:
 
         """
         current_velocity, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
-            self.port_handler, id, ADDR_PRESENT_VELOCITY
+            self.port_handler, motor_id, ADDR_PRESENT_VELOCITY
         )
 
         if dxl_comm_result != COMM_SUCCESS:
@@ -212,13 +214,13 @@ class DynamixelInterface:
             )
         return current_velocity
 
-    def read_effort(self, id):
+    def read_effort(self, motor_id):
         """
         Read the effort of a specific motor.
 
         Args:
         ----
-        id (int): The id of the motor to read from.
+        motor_id (int): The motor_id of the motor to read from.
 
         Returns
         -------
@@ -226,7 +228,7 @@ class DynamixelInterface:
 
         """
         current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, id, ADDR_PRESENT_CURRENT
+            self.port_handler, motor_id, ADDR_PRESENT_CURRENT
         )
         if dxl_comm_result != COMM_SUCCESS:
             current_effort = False
@@ -238,11 +240,11 @@ class DynamixelInterface:
             self.node.get_logger().error(
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
-        self.node.get_logger().debug(f'DYN: Motor {id} current {current_effort}')
+        self.node.get_logger().debug(f'DYN: Motor {motor_id} current {current_effort}')
         current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, id, ADDR_PRESENT_PWM
+            self.port_handler, motor_id, ADDR_PRESENT_PWM
         )
-        self.node.get_logger().debug(f'DYN: Motor {id} pwm {current_effort}')
+        self.node.get_logger().debug(f'DYN: Motor {motor_id} pwm {current_effort}')
 
         return current_effort
 
@@ -250,7 +252,7 @@ class DynamixelInterface:
 class Motor:
     """Polydact motor class using Dynmaixel SDK."""
 
-    def __init__(self, interface: DynamixelInterface, id: int):
+    def __init__(self, interface: DynamixelInterface, motor_id: int):
         """
         Initialize a single motor.
 
@@ -258,16 +260,16 @@ class Motor:
         ----
         interface (DynamixelInterface): Contains the port and packet handler that will control this
                                         motor.
-        id (int): The Dynamixel motor ID.
+        motor_id (int): The Dynamixel motor ID.
 
         """
-        self.id = id
+        self.motor_id = motor_id
         self.dyn = interface
         self.position = 0
         self.velocity = 0
         self.effort = 0
         # Initialize off
-        self.dyn.send_on_off(self.id, 0)
+        self.dyn.send_on_off(self.motor_id, 0)
         self.active = 0
 
     def set_velocity(self, goal: float, deadzone: float):
@@ -280,16 +282,16 @@ class Motor:
             goal = int(goal**3 * 300)
         else:
             goal = 0
-        success = self.dyn.send_velocity(self.id, goal)
+        success = self.dyn.send_velocity(self.motor_id, goal)
 
         match success:
             case True:
                 self.dyn.node.get_logger().debug(
-                    f'Motor {id}: Successfully set {self.mode} goal to {goal}'
+                    f'Motor {self.motor_id}: Successfully set {self.mode} goal to {goal}'
                 )
             case False:
                 self.dyn.node.get_logger().debug(
-                    f'Motor {id}: Failed to set {self.mode} goal to {goal}'
+                    f'Motor {self.motor_id}: Failed to set {self.mode} goal to {goal}'
                 )
 
     def set_off(self):
@@ -303,7 +305,7 @@ class Motor:
         (bool): Was the motor succesfully turned off?
 
         """
-        success = self.dyn.send_on_off(self.id, 0)
+        success = self.dyn.send_on_off(self.motor_id, 0)
         if success:
             self.active = 0
         return success
@@ -317,20 +319,20 @@ class Motor:
         success = self.set_off()
         # Change the control mode
         if success and mode != 0:
-            success = self.dyn.send_mode(self.id, mode)
+            success = self.dyn.send_mode(self.motor_id, mode)
         # Turn torque back on and change state if mode was successfully changed
         if success and mode != 0:
             self.mode = mode
-            success = self.dyn.send_on_off(self.id, 1)
+            success = self.dyn.send_on_off(self.motor_id, 1)
         if success:
             self.active = 1
 
     def get_state(self):
         """Read the current position, velocity, and effort of the motor."""
-        self.position = self.dyn.read_position(self.id)
-        self.velocity = self.dyn.read_velocity(self.id)
-        self.effort = self.dyn.read_effort(self.id)
+        self.position = self.dyn.read_position(self.motor_id)
+        self.velocity = self.dyn.read_velocity(self.motor_id)
+        self.effort = self.dyn.read_effort(self.motor_id)
 
-        self.dyn.node.get_logger().debug(f'Motor {self.id} position {self.position}')
-        self.dyn.node.get_logger().debug(f'Motor {self.id} velocity  {self.velocity}')
-        self.dyn.node.get_logger().debug(f'Motor {self.id} effort  {self.effort}')
+        self.dyn.node.get_logger().debug(f'Motor {self.motor_id} position {self.position}')
+        self.dyn.node.get_logger().debug(f'Motor {self.motor_id} velocity  {self.velocity}')
+        self.dyn.node.get_logger().debug(f'Motor {self.motor_id} effort  {self.effort}')

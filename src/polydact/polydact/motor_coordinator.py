@@ -1,7 +1,7 @@
 """Test different control modes of one Dynamixel motor."""
 
 from polydact.dynamixel_interface import Motor, DynamixelInterface
-from polydact_interfaces.msg import MotorState
+from polydact_interfaces.msg import MotorGoal
 
 from polydact_interfaces.srv import Mode
 import rclpy
@@ -19,7 +19,7 @@ class MotorCoordinator(Node):
         + "motor_states" (sensor_msgs/msg/JointState) - Actual states of the motors
 
     Subscribers:
-        + "motor_goal" (polydact_interfaces/msg/MotorState) - A goal to set a particular motor to
+        + "motor_goal" (polydact_interfaces/msg/MotorGoal) - A goal to set a particular motor to
 
     Services:
         + "set_mode" (polydact_interfaces/srv/Mode) - What Control Mode to set the motor to.
@@ -41,14 +41,14 @@ class MotorCoordinator(Node):
 
         # Set motors to my settings
         self.declare_parameter('motor_ids', [1, 2, 3])
-        self.ids = self.get_parameter('motor_ids').value
+        self.motor_ids = self.get_parameter('motor_ids').value
 
         self.declare_parameter('Control_Mode', 1)
         self.mode = self.get_parameter('Control_Mode').value
 
         self.motors = {}
-        for id in self.ids:
-            self.motors.update({id: Motor(self.dyn, id)})
+        for motor_id in self.motor_ids:
+            self.motors.update({id: Motor(self.dyn, motor_id)})
 
         # Motors should initialize off, but loop through just to be sure
         # Should probably ad a check to make sure they're actually all off
@@ -56,7 +56,7 @@ class MotorCoordinator(Node):
             motor.set_off(0)
 
         self.goal_sub = self.create_subscription(
-            MotorState,
+            MotorGoal,
             'motor_goal',
             self.set_single_goal,
             QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
@@ -65,30 +65,30 @@ class MotorCoordinator(Node):
 
         self.motor_states_pub = self.create_publisher(JointState, 'motor_states', 10)
 
-        self.posi_pub = self.create_publisher(MotorState, 'cur_position', 10)
-        self.velo_pub = self.create_publisher(MotorState, 'cur_velocity', 10)
-        self.load_pub = self.create_publisher(MotorState, 'cur_load', 10)
+        self.posi_pub = self.create_publisher(MotorGoal, 'cur_position', 10)
+        self.velo_pub = self.create_publisher(MotorGoal, 'cur_velocity', 10)
+        self.load_pub = self.create_publisher(MotorGoal, 'cur_load', 10)
 
         self.timer = self.create_timer(1 / 100, self.timer_callback)
         self.get_logger().info('Motor Coordinator ready')
 
-    def set_single_goal(self, msg: MotorState):
+    def set_single_goal(self, msg: MotorGoal):
         """
         Set the position, velocity, or PWM goal for a single motor.
 
         Args:
         ----
-        msg (polydact_interfaces/msg/MotorState): msg.id is the motor to set the goal for
-                                                  msg.state is the goal to set to
+        msg (polydact_interfaces/msg/MotorGoal): msg.motor_id is the motor to set the goal for
+                                                  msg.goal is the goal to set to
 
         """
-        self.get_logger().debug(f'MotorState {msg.id} {msg.state} received.)')
-        if msg.id not in self.motors.keys():
+        self.get_logger().debug(f'MotorGoal {msg.motor_id} {msg.goal} received.)')
+        if msg.motor_id not in self.motors.keys():
             self.get_logger().error(f'Unexpected motor id received: {msg}')
             return
 
         deadzone = 0.3
-        self.motors[msg.id].set_velocity(-1 * msg.state, deadzone)
+        self.motors[msg.motor_id].set_velocity(-1 * msg.goal, deadzone)
 
     def switch_mode_cb(self, request, response):
         """
@@ -123,7 +123,7 @@ class MotorCoordinator(Node):
         for motor in self.motors.values():
             motor.get_state()
             # TODO: Add some sort of checking for if the get_state fails
-            motor_states.name.append(str(motor.id))
+            motor_states.name.append(str(motor.motor_id))
             motor_states.position.append(motor.position)
             motor_states.velocity.append(motor.velocity)
             motor_states.effort.append(motor.effort)

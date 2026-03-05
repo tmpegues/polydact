@@ -1,10 +1,11 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
-from polydact_interfaces.msg import MotorState
+from polydact_interfaces.msg import MotorGoal
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
+from std_srvs.srv import Empty
 from polydact.sensor import Sensor
 
 import serial
@@ -19,10 +20,12 @@ class SerialReader(Node):
 
         # Creating publisher first to that PlotJuggler doesn't have to wait for calibration
         self.goal_pub = self.create_publisher(
-            MotorState,
+            MotorGoal,
             'motor_goal',
             QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
         )
+
+        self.remap_srv = self.create_service(Empty, 'remap', self.remap_cb)
 
         # Get motor list and initialize sensors
         self.declare_parameter('sensor_ids', [1, 2, 3])
@@ -103,7 +106,7 @@ class SerialReader(Node):
                     self.reading_timer.cancel()
                 self.publishing_timer.cancel()
                 for motor_id in self.motor_ids:
-                    self.goal_pub.publish(MotorState(id=motor_id, state=0))
+                    self.goal_pub.publish(MotorGoal(motor_id=motor_id, goal=0))
 
             case False:
                 for sensor in self.sensors.values():
@@ -157,6 +160,18 @@ class SerialReader(Node):
                 max_bent = id
 
         return max_bent
+
+    def remap_cb(self, request, response):
+        """
+        Remap sensors.
+
+        Args:
+        ----
+        request (std_srv/srv/Empty): unused
+        response (std_srv/srv/Empty): unused
+
+        """
+        self.map_sensor_to_motor()
 
     def map_sensor_to_motor(self):
         """Change the assignment of which sensor controls which motor."""
@@ -315,9 +330,9 @@ class SerialReader(Node):
         self.get_logger().debug('Publishing Timer')
 
         self.goal_pub.publish(
-            MotorState(
-                id=self.sensors[list(self.sensors.keys())[self.last_published]].motor_id,
-                state=self.sensors[list(self.sensors.keys())[self.last_published]].get_value(),
+            MotorGoal(
+                motor_id=self.sensors[list(self.sensors.keys())[self.last_published]].motor_id,
+                goal=self.sensors[list(self.sensors.keys())[self.last_published]].get_value(),
             )
         )
         self.last_published += 1
