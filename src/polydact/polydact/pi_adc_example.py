@@ -29,4 +29,4 @@ def read_adc(channel):
 while True:
     for channel in range(8):
         raw, volts = read_adc(channel)
-        print(f'Channel {channel}: {raw}, {volts:.2f}V')
+        print(f'Channel {channel}: {raw}, {volts}V')
