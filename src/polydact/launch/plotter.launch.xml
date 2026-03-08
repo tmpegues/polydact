@@ -1,0 +1,6 @@
+<launch>
+
+    <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown"
+    args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml"/>
+
+</launch>

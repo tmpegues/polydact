@@ -1,47 +1,38 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <root>
  <tabbed_widget parent="main_window" name="Main Window">
-  <Tab containers="1" tab_name="tab1">
+  <Tab tab_name="tab1" containers="1">
    <Container>
-    <DockSplitter orientation="-" sizes="1" count="1">
-     <DockSplitter orientation="|" sizes="0.5;0.5" count="2">
-      <DockSplitter orientation="-" sizes="0.500444;0.499556" count="2">
+    <DockSplitter sizes="1" orientation="-" count="1">
+     <DockSplitter sizes="0.5;0.5" orientation="|" count="2">
+      <DockSplitter sizes="0.5;0.5" orientation="-" count="2">
        <DockArea name="Finger Positions">
-        <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
-         <range bottom="-1.006056" top="-0.751711" left="105.831925" right="110.823801"/>
+        <plot style="Lines" flip_y="false" mode="TimeSeries" flip_x="false">
+         <range left="14.749253" bottom="-0.812038" right="19.748411" top="-0.306440"/>
          <limitY/>
-         <curve color="#ff0000" name="Finger_1"/>
-         <curve color="#00ff00" name="Finger_2"/>
-         <curve color="#0000ff" name="Finger_3"/>
+         <curve color="#ff0000" name="Finger 1"/>
+         <curve color="#00ff00" name="Finger 2"/>
+         <curve color="#0000ff" name="Finger 3"/>
         </plot>
        </DockArea>
        <DockArea name="Actual Velocities">
-        <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
-         <range bottom="-0.100000" top="0.100000" left="54.905026" right="59.886679"/>
+        <plot style="Lines" flip_y="false" mode="TimeSeries" flip_x="false">
+         <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
          <limitY/>
-         <curve color="#ff0000" name="/motor_states/1/velocity"/>
-         <curve color="#00ff00" name="/motor_states/2/velocity"/>
-         <curve color="#0000ff" name="/motor_states/3/velocity"/>
         </plot>
        </DockArea>
       </DockSplitter>
-      <DockSplitter orientation="-" sizes="0.500444;0.499556" count="2">
+      <DockSplitter sizes="0.5;0.5" orientation="-" count="2">
        <DockArea name="Actual Positions">
-        <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
-         <range bottom="-107374068.750000" top="4402341270.750000" left="54.905026" right="59.886679"/>
+        <plot style="Lines" flip_y="false" mode="TimeSeries" flip_x="false">
+         <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
          <limitY/>
-         <curve color="#ff0000" name="/motor_states/1/position"/>
-         <curve color="#00ff00" name="/motor_states/2/position"/>
-         <curve color="#0000ff" name="/motor_states/3/position"/>
         </plot>
        </DockArea>
        <DockArea name="Actual Efforts">
-        <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
-         <range bottom="-0.100000" top="0.100000" left="54.905026" right="59.886679"/>
+        <plot style="Lines" flip_y="false" mode="TimeSeries" flip_x="false">
+         <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
          <limitY/>
-         <curve color="#ff0000" name="/motor_states/1/effort"/>
-         <curve color="#00ff00" name="/motor_states/2/effort"/>
-         <curve color="#0000ff" name="/motor_states/3/effort"/>
         </plot>
        </DockArea>
       </DockSplitter>
@@ -74,7 +65,7 @@
    <max_array_size value="100"/>
    <boolean_strings_to_number value="true"/>
    <remove_suffix_from_strings value="true"/>
-   <selected_topics value="/motor_goal;/motor_states"/>
+   <selected_topics value="/motor_goal"/>
   </plugin>
   <plugin ID="UDP Server"/>
   <plugin ID="WebSocket Server"/>
@@ -93,9 +84,45 @@
  <previouslyLoaded_Streamer name="ROS2 Topic Subscriber"/>
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
-  <snippet name="Finger_1">
+  <snippet name="Finger 3">
+   <global></global>
+   <function>if (v1 == 3) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/goal</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/motor_id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger 2">
+   <global></global>
+   <function>if (v1 == 2) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/goal</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/motor_id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger 1">
    <global></global>
    <function>if (v1 == 1) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/goal</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/motor_id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger_3">
+   <global></global>
+   <function>if (v1 == 3) then
     return time, value
 else
     return {}
@@ -117,16 +144,16 @@ end</function>
     <v1>/motor_goal/id</v1>
    </additional_sources>
   </snippet>
-  <snippet name="Finger_3">
+  <snippet name="Finger_1">
    <global></global>
-   <function>if (v1 == 3) then
+   <function>if (v1 == 1) then
     return time, value
 else
     return {}
 end</function>
    <linked_source>/motor_goal/state</linked_source>
    <additional_sources>
-    <v1>/motor_goal/id</v1>
+    <v1>/motor_goal/motor_id</v1>
    </additional_sources>
   </snippet>
  </customMathEquations>
