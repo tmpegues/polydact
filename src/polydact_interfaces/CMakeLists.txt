@@ -15,7 +15,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MotorGoal.msg"
-  "msg/MotorGoalArray.msg"
   "srv/Mode.srv"
   )
 
