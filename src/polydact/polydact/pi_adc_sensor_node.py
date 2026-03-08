@@ -43,13 +43,8 @@ class PiADCSensorNode(Node):
         # for sensor_id, motor_id in zip(sensor_ids, self.motor_ids):
         #     self.sensors.update({sensor_id: Sensor(sensor_id, motor_id)})
 
-        self.set_mode_client = self.create_client(Mode, 'set_mode')
-        if not self.set_mode_client.wait_for_service(timeout_sec=5.0):
-            self.get_logger().error('Failed to find Mode ("set_mode") service')
-            raise RuntimeError('Failed to find Mode ("set_mode") service')
-
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.min_max_calibration(500)
+        self.min_max_calibration(1000)
 
         # Begin publishing normalized sensor readings
         pub_freq = 100
