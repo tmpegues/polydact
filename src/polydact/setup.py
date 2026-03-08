@@ -46,7 +46,7 @@ setup(
     entry_points={
         'console_scripts': [
             'motor_coordinator = polydact.motor_coordinator:main',
-            'serial_reader = polydact.serial_reader:main',
+            'serial_sensor_node = polydact.serial_sensor_node:main',
         ],
     },
 )
