@@ -47,6 +47,7 @@ setup(
         'console_scripts': [
             'motor_coordinator = polydact.motor_coordinator:main',
             'serial_sensor_node = polydact.serial_sensor_node:main',
+            'pi_adc_sensor_node = polydact.pi_adc_sensor_node:main',
         ],
     },
 )
