@@ -1,12 +1,10 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
-from polydact_interfaces.msg import MotorState
+from polydact_interfaces.msg import MotorGoal
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
 from polydact.sensor import Sensor
-
-import serial
 
 
 class SerialReader(Node):
@@ -18,7 +16,7 @@ class SerialReader(Node):
 
         # Creating publisher first to that PlotJuggler doesn't have to wait for calibration
         self.goal_pub = self.create_publisher(
-            MotorState,
+            MotorGoal,
             'motor_goal',
             QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
         )
@@ -29,18 +27,6 @@ class SerialReader(Node):
         self.sensors = {}
         for id in motor_ids:
             self.sensors.update({id: Sensor(id)})
-
-        # Set up serial port
-        self.declare_parameter('serial_port', '/dev/ttyACM0')
-        port = self.get_parameter('serial_port').value
-        self.get_logger().info(f'serial port: {port}')
-
-        self.s_port = False
-        while not self.s_port:
-            try:
-                self.s_port = serial.Serial(port, 115200, timeout=10)
-            except serial.SerialException:
-                self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
         self.full_calibration(500)
@@ -171,9 +157,9 @@ class SerialReader(Node):
         self.get_logger().debug('Publishing Timer')
 
         self.goal_pub.publish(
-            MotorState(
-                id=self.sensors[list(self.sensors.keys())[self.last_published]].motor_id,
-                state=self.sensors[list(self.sensors.keys())[self.last_published]].get_value(),
+            MotorGoal(
+                motor_id=self.sensors[list(self.sensors.keys())[self.last_published]].motor_id,
+                goal=self.sensors[list(self.sensors.keys())[self.last_published]].get_value(),
             )
         )
         self.last_published += 1
