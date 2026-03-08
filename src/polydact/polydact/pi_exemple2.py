@@ -1,9 +1,10 @@
 from gpiozero import MCP3008
 import time
+
 adc = [MCP3008(channel=i) for i in range(8)]
 
 while True:
-    #for channel in adc:
-    #    print(channel.value)	
-    print(adc[0].value)
-    time.sleep(.05)
+    for channel in [1, 2, 3]:
+        print(channel.value)
+
+    time.sleep(0.1)
