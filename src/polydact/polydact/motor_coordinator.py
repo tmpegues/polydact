@@ -53,7 +53,7 @@ class MotorCoordinator(Node):
         # Motors should initialize off, but loop through just to be sure
         # Should probably ad a check to make sure they're actually all off
         for motor in self.motors.values():
-            motor.set_off(0)
+            motor.set_off()
 
         self.goal_sub = self.create_subscription(
             MotorGoal,

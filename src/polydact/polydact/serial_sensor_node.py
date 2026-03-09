@@ -50,11 +50,6 @@ class SerialReader(Node):
             except serial.SerialException:
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
-        self.set_mode_client = self.create_client(Mode, 'set_mode')
-        if not self.set_mode_client.wait_for_service(timeout_sec=5.0):
-            self.get_logger().error('Failed to find Mode ("set_mode") service')
-            raise RuntimeError('Failed to find Mode ("set_mode") service')
-
         # Calibrate sensor min/max with specified number of readings from each sensor
         self.min_max_calibration(500)
 
