@@ -48,7 +48,7 @@ class MotorCoordinator(Node):
 
         self.motors = {}
         for motor_id in self.motor_ids:
-            self.motors.update({id: Motor(self.dyn, motor_id)})
+            self.motors.update({motor_id: Motor(self.dyn, motor_id)})
 
         # Motors should initialize off, but loop through just to be sure
         # Should probably ad a check to make sure they're actually all off
@@ -70,6 +70,10 @@ class MotorCoordinator(Node):
         self.load_pub = self.create_publisher(MotorGoal, 'cur_load', 10)
 
         self.timer = self.create_timer(1 / 100, self.timer_callback)
+        self.get_logger().info(f'motors: {self.motors.keys()}')
+        for motor in self.motors.values():
+            motor.set_mode(1)
+
         self.get_logger().info('Motor Coordinator ready')
 
     def set_single_goal(self, msg: MotorGoal):
