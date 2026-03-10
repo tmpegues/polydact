@@ -1,12 +1,12 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
 from polydact_interfaces.msg import MotorGoal
-from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
 from std_srvs.srv import Empty
 from polydact.sensor import Sensor
+import time
 
 from gpiozero import MCP3008
 
@@ -35,6 +35,7 @@ class PiADCSensorNode(Node):
         self.motor_ids = self.get_parameter('motor_ids').value
 
         self.adc = {channel: MCP3008(channel=channel) for channel in sensor_ids}
+        time.sleep(1)  # I think the ADC takes a moment to actually start up
 
         self.sensors = {
             sensor_id: Sensor(sensor_id, motor_id)
@@ -44,11 +45,11 @@ class PiADCSensorNode(Node):
         #     self.sensors.update({sensor_id: Sensor(sensor_id, motor_id)})
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.min_max_calibration(1000)
+        self.min_max_calibration(2500)
 
         # Begin publishing normalized sensor readings
         pub_freq = 100
-        read_freq = 100
+        read_freq = 1000
         self.last_published = 0
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
@@ -242,6 +243,7 @@ class PiADCSensorNode(Node):
             )
             loop += 1
             reads = self.read_adc()
+            self.get_logger().info((f'ADC read: {reads}'))
             for id, value in reads.items():
                 if id not in self.sensors:
                     self.get_logger().error(f'Sensor message id {id} is not valid id.')
