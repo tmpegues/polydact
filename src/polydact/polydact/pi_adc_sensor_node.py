@@ -237,6 +237,7 @@ class PiADCSensorNode(Node):
         loop = 0
         self.get_logger().info(f'Beginning min/max calibration for {len(self.sensors)} sensors.')
         while calibrated < len(self.sensors) * num_points:
+            time.sleep(0.01)
             self.get_logger().info(
                 f'Loop {loop} ({calibrated}/{len(self.sensors) * num_points})',
                 throttle_duration_sec=1,
