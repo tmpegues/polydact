@@ -11,7 +11,7 @@
     <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
 
 
-    <node pkg="polydact" exec="serial_sensor_node" on_exit="shutdown">
+    <node pkg="polydact" exec="serial_sensor_node" on_exit="shutdown" if="$(equals $(var sensor_source) serial)">
         <param name="serial_port" value="$(var serial_port)"/>
         <param name="sensor_ids" value="$(var sensor_ids)"/>
         <param name="motor_ids" value="$(var motor_ids)"/>
@@ -30,33 +30,3 @@
     <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown" args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml" if="$(var plotter)"/>
 
 </launch>
-
-<!-- <launch>
-    <arg name="motor_ids" default="[1, 2, 3]" description="list: Dynamixel IDs of the motors you're connecting. Order maps to sensor_ids order."/>
-    <arg name="sensor_ids" default = "[1, 2, 3]" description="list: IDs of the glove sensors. I use 1 = ring finger, 2 = middle finger, 3 = index finger. Order maps to motor_ids order."/>
-    <arg name="control_mode" default="1" description="0, 1: Should the motors start up with torque off or on?"/>
-
-    <arg name="plotter" default="True" description="(bool) Launch plotjuggler to view motor goal messages?"/>
-    <arg name="motors" default="True" description="(bool) Run motors? If false, only the sensor node will launch"/>
-    <arg name="calibration_len" default="400" description="(int) How many points should be collected for each sensor to calibrate min/max range?"/>
-
-    <node pkg="polydact" exec="pi_adc_sensor_node" on_exit="shutdown" if="$(equals $(var sensor_source) pi)">
-        <param name="sensor_ids" value="$(var sensor_ids)"/>
-        <param name="motor_ids" value="$(var motor_ids)"/>
-    </node>
-
-    <node pkg="polydact" exec="pi_adc_sensor_node" on_exit="shutdown" if="$(equals $(var sensor_source) serial)">
-        <param name="sensor_ids" value="$(var sensor_ids)"/>
-        <param name="motor_ids" value="$(var motor_ids)"/>
-        <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
-    </node>
-
-
-    <node pkg="polydact" exec="motor_coordinator" on_exit="shutdown" if="$(var motors)">
-        <param name="motor_ids" value="$(var motor_ids)"/>
-        <param name="control_mode" value="$(var control_mode)"/>
-    </node>
-
-    <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown" args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml" if="$(var plotter)"/>
-
-</launch> -->
