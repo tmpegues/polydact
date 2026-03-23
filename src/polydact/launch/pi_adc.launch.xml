@@ -16,7 +16,6 @@
         <param name="control_mode" value="$(var control_mode)"/>
     </node>
 
-    <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown"
-    args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml" if="$(var plotter)"/>
+    <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown" args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml" if="$(var plotter)"/>
 
 </launch>

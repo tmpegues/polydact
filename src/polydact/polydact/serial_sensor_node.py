@@ -1,7 +1,6 @@
 """Read the serial monitor from the Pico 2 to publish a motor goal."""
 
 from polydact_interfaces.msg import MotorGoal
-from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
@@ -34,6 +33,9 @@ class SerialReader(Node):
         self.declare_parameter('motor_ids', [1, 2, 3])
         self.motor_ids = self.get_parameter('motor_ids').value
 
+        self.declare_parameter('calibration_len', 400)
+        self.calibration_len = self.get_parameter('calibration_len').value
+
         self.sensors = {}
         for sensor_id, motor_id in zip(sensor_ids, self.motor_ids):
             self.sensors.update({sensor_id: Sensor(sensor_id, motor_id)})
@@ -51,7 +53,7 @@ class SerialReader(Node):
                 self.get_logger().error('Serial device not found.', throttle_duration_sec=1)
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.min_max_calibration(500)
+        self.min_max_calibration(self.calibration_len)
 
         # Begin publishing normalized sensor readings
         self.pub_freq = 100

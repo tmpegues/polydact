@@ -17,6 +17,7 @@ class PiADCSensorNode(Node):
     def __init__(self):
         """Initialize sensors and goal publisher."""
         super().__init__('pi_adc_sensor_node')
+        self.get_logger().info('Starting Pi ADC node')
 
         # Creating publisher first to that PlotJuggler doesn't have to wait for calibration
         self.goal_pub = self.create_publisher(
@@ -34,6 +35,9 @@ class PiADCSensorNode(Node):
         self.declare_parameter('motor_ids', [1, 2, 3])
         self.motor_ids = self.get_parameter('motor_ids').value
 
+        self.declare_parameter('calibration_len', 400)
+        self.calibration_len = self.get_parameter('calibration_len').value
+
         self.adc = {channel: MCP3008(channel=channel) for channel in sensor_ids}
         time.sleep(1)  # I think the ADC takes a moment to actually start up
 
@@ -45,7 +49,7 @@ class PiADCSensorNode(Node):
         #     self.sensors.update({sensor_id: Sensor(sensor_id, motor_id)})
 
         # Calibrate sensor min/max with specified number of readings from each sensor
-        self.min_max_calibration(1000)
+        self.min_max_calibration(self.calibration_len)
 
         # Begin publishing normalized sensor readings
         pub_freq = 100
