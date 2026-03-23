@@ -248,7 +248,7 @@ class PiADCSensorNode(Node):
             )
             loop += 1
             reads = self.read_adc()
-            self.get_logger().info((f'ADC read: {reads}'))
+            self.get_logger().debug((f'ADC read: {reads}'))
             for id, value in reads.items():
                 if id not in self.sensors:
                     self.get_logger().error(f'Sensor message id {id} is not valid id.')
