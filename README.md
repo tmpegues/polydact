@@ -4,10 +4,13 @@
 Polydact a wearable robotic sixth finger that gives its user greater dexterity than they have with their natural hand. The device is controlled by a glove with embedded flex sensors, as shown in the video below.
 
 [![Polydact in use](/media/video.png)](https://youtu.be/Mq05AG6Wxf4)
+<img src=media/index_finger.gif width="33%">
+<img src=media/middle_finger.gif width="33%">
+<img src=media/ring_finger.gif width="33%">
 
 
 ## Hardware Required
-There are four main parts of the device: the tentacle itself, the control device, actuators, and electronics. *Italicized* parts are off the shelf parts that can be purchased. **Bolded** parts are custom designed and must be fabricated.
+There are four main parts of the device: the tentacle itself, a control device, actuators, and electronics. *Italicized* parts are off the shelf parts that can be purchased. **Bolded** parts are custom designed and must be fabricated.
 
 ### 1. Tentacle
 Four parts are required:
