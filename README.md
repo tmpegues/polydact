@@ -2,7 +2,8 @@
 ## Overview
 I have developed a wearable robotic sixth finger that gives its user greater dexterity than they have with their natural hand. The Polydact device is controlled by a glove with embedded flex sensors.
 
-[[TODO: embed annotated clip video]]
+[![Polydact in use](/media/video.png)](https://youtu.be/Mq05AG6Wxf4)
+
 
 ## Hardware Requirements
 There are four main parts of the device: the tentacle itself, the control device, actuators, and electronics. *Italicized* parts are off the shelf parts that can be purchased. **Bolded** parts are custom designed and must be fabricated.
@@ -18,7 +19,7 @@ Four parts are required:
 ### 2. Control Device
 A glove with three flex sensors attached is the recommended control device. Below is an image and circuit diagram of the glove created for this project. It uses 3 *[Spectra Symbol flex sensors](https://www.adafruit.com/product/1070)*.
 
-[[TODO: add /design/circuit/glove_circuit2.svg]]
+![Control glove and circuit diagram](/design/circuit/glove_circuit2.svg)
 
 ### 3. Actuation
 Six parts are required:
