@@ -1,11 +1,12 @@
 # Polydact: a flexible extra digit
+[Polydact on portfolio](tmpegues.github.io/project/polydact)
 ## Overview
-I have developed a wearable robotic sixth finger that gives its user greater dexterity than they have with their natural hand. The Polydact device is controlled by a glove with embedded flex sensors.
+Polydact a wearable robotic sixth finger that gives its user greater dexterity than they have with their natural hand. The device is controlled by a glove with embedded flex sensors, as shown in the video below.
 
 [![Polydact in use](/media/video.png)](https://youtu.be/Mq05AG6Wxf4)
 
 
-## Hardware Requirements
+## Hardware Required
 There are four main parts of the device: the tentacle itself, the control device, actuators, and electronics. *Italicized* parts are off the shelf parts that can be purchased. **Bolded** parts are custom designed and must be fabricated.
 
 ### 1. Tentacle
@@ -40,7 +41,7 @@ Two functions are required: the ability to interface with the control device and
 2. Use a laptop or other full featured computer connected by USB serial to a microcontroller with built-in ADC that interfaces with the control device.
     * [Example code](/pico_serial_sensor/) is provided to use a *Raspberry Pi Pico 2* to inferface with the control device.
 
-Power: When using a Raspberry Pi,
+Power: A 12 V battery can be used connected to the U2D2 Power Hub directly, and the Raspberry Pi through a buck converter to allow use of the device not tethered to an external power supply.
 
 ## Assembly
 Using a battery powered Raspberry Pi for motor control with ADC for control device interface:
@@ -54,12 +55,31 @@ Using a battery powered Raspberry Pi for motor control with ADC for control devi
 6. Attach switch box, Raspberry Pi, U2D2 and Power Hub, and motor strap to chest strap and tie diagonally across the user's chest.
 7. Attach wrist mount to strap and tie strap to user's wrist.
 8. Slide motors into motor strap.
-9. Admire
+9. Admire your handiwork
 
 
 ## ROS Setup
 Packages `polydact` and `polydact_interfaces` are written for ROS 2 Kilted and can be downloaded and built with
 ```
 git clone https://github.com/tmpegues/polydact.git
-cd
+cd polydact
+rosdep install --from-paths src --ignore-src
+colcon build --paths src/*
+source install/setup.bash
 ```
+After installing dependencies, building workspace, and sourcing, you will be ready to launch.
+
+## Launching
+The main launchfile can be used with
+```
+ros2 launch polydact polydact.launch.xml sensor_source:=pi motors:=true control_mode:=0 plotter:=false
+```
+This will launch both the `pi_adc_sensor_node` and `motor_coordinator` nodes.
+* `sensor_source` can be changed to `serial` to use a serial device over USB instead.
+* `motors:=true` launches the `motor_coordinator` node.
+    * If developing or troubleshooting a control device, `motors:=false` will not launch the `motor_coordinator_node`, allowing for focus on teh sensor node.
+* `control_mode:=0` will initialize the motors with torque off.
+    * After sensor calibration, motor torque can be activated with `ros2 service call /set_mode polydact_interfaces/srv/Mode '{mode: 1}'`
+* `plotter:=false` will not open the PlotJuggler visualization of sensor positions.
+    * When controlling the device from a Raspberry Pi, it is recommended to run PlotJuggler on another device that can receive the ROS topics so the Polydact user can see that their finger movements are being read properly.
+
