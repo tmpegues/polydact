@@ -34,7 +34,7 @@ class MotorCoordinator(Node):
 
     def __init__(self):
         """Initialize motor control."""
-        super().__init__('motor_coordiantor')
+        super().__init__('motor_coordinator')
         self.active = 0
 
         self.dyn = DynamixelInterface(self)
