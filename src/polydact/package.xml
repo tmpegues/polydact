@@ -3,7 +3,7 @@
 <package format="3">
   <name>polydact</name>
   <version>0.0.0</version>
-  <description>This package is for the control of a supernumerary finger prosthetic.</description>
+  <description>This package is for the control of Polydact, a wearable supernumerary robotic finger.</description>
   <maintainer email="MiguelP@u.northwestern.edu">Miguel Pegues</maintainer>
   <license>TODO: License declaration</license>
 
