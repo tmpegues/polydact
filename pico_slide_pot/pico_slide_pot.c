@@ -19,46 +19,17 @@ int ENABLE[3] = {13, 16, 19};
 int PIN_A[3] = {14, 17, 20};
 int PIN_B[3] = {15, 18, 21};
 
-float read_pot(int i)
+int read_pot(int i)
 {
     adc_select_input(POT[i]);
-    float value = (float)adc_read();
-    //    value = adc_read();
-    value -= 4095 / 2;
-    value *= 100;
-    value /= 4095 / 2;
 
-    return value;
+    return adc_read();
 }
 
-void set_motor_pos(int motor, float goal)
+void set_motor_pos(int motor, int goal)
 {
 
-    int duty = (read_pot(motor) - goal) * 100;
-    if (duty > 0)
-    {
-
-        gpio_put(PIN_A[motor], 1);
-        gpio_put(PIN_B[motor], 0);
-        pwm_set_gpio_level(ENABLE[motor], duty);
-    }
-    else if (duty < 0)
-    {
-
-        gpio_put(PIN_A[motor], 0);
-        gpio_put(PIN_B[motor], 1);
-        pwm_set_gpio_level(ENABLE[motor], -duty);
-    }
-    else
-    {
-        pwm_set_gpio_level(ENABLE[motor], 0);
-    }
-}
-
-void set_motor_speed(int motor, float speed)
-{
-
-    int duty = (int)speed;
+    int duty = (read_pot(motor) - goal) * 10000 / 4095;
     if (duty > 0)
     {
 
@@ -104,24 +75,11 @@ int main()
     init_motors(3);
     adc_init();
 
-    float step = 900;
-    float change = .1;
     while (true)
     {
-        step += change;
-        // if (step > 50 || step < -50)
-        // {
-        //     change *= -1;
-        // }
-        float goal = 0;
-        (float)sin(step) * 100;
         for (int i = 0; i < 3; i++)
         {
-            goal = (float)sin(step+i*3.14*2/3) * 100;
-            printf("%f\n", goal);
-            set_motor_pos(i, goal);
+            set_motor_pos(i, (int)((1.0 - i / 3.0) * read_pot(0)));
         }
-        printf("\n");
-        sleep_ms(10);
     }
 }
