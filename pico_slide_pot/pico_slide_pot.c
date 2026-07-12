@@ -11,8 +11,15 @@
 // #define PIN_A 14
 // #define PIN_B 15
 
-#define PWMDIV 7.5
+#define PWMDIV 1.0
 #define WRAP 1000
+
+#define SUPPLY_V 6.0
+#define MIN_V 5.0
+#define MAX_V 10.0
+
+#define MIN_DUTY MIN_V / SUPPLY_V *WRAP
+#define MAX_DUTY SUPPLY_V > MAX_V ? (MAX_V / SUPPLY_V * WRAP) : WRAP
 
 int POT[3] = {0, 1, 2};
 int ENABLE[3] = {13, 16, 19};
@@ -28,26 +35,30 @@ int read_pot(int i)
 
 void set_motor_pos(int motor, int goal)
 {
+    int pos = read_pot(motor);
+    float duty = ((pos - goal) / 4095.0);
 
-    int duty = (read_pot(motor) - goal) * 10000 / 4095;
+    printf("motor cur goal duty %d %4d %4d %.4f\n", motor, pos, goal, duty);
+
     if (duty > 0)
     {
-
+        duty = duty  * (MAX_DUTY - MIN_DUTY) + MIN_DUTY;
         gpio_put(PIN_A[motor], 1);
         gpio_put(PIN_B[motor], 0);
         pwm_set_gpio_level(ENABLE[motor], duty);
     }
     else if (duty < 0)
     {
-
+        duty = -duty * (MAX_DUTY - MIN_DUTY) + MIN_DUTY;
         gpio_put(PIN_A[motor], 0);
         gpio_put(PIN_B[motor], 1);
-        pwm_set_gpio_level(ENABLE[motor], -duty);
+        pwm_set_gpio_level(ENABLE[motor], duty);
     }
     else
     {
         pwm_set_gpio_level(ENABLE[motor], 0);
     }
+    printf("%f\n", duty);
 }
 
 void init_motors(int num_motors)
@@ -79,7 +90,10 @@ int main()
     {
         for (int i = 0; i < 3; i++)
         {
-            set_motor_pos(i, (int)((1.0 - i / 3.0) * read_pot(0)));
+            // set_motor_pos(i, (int)((1.0 - i / 3.0) * read_pot(0)));
+            set_motor_pos(i, 0);
         }
+        printf("\n");
+        sleep_ms(10);
     }
 }
