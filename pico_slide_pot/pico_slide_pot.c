@@ -11,19 +11,23 @@
 // #define PIN_A 14
 // #define PIN_B 15
 
-#define PWMDIV 1.0
-#define WRAP 1000
-
-#define SUPPLY_V 6.0
+#define SUPPLY_V 12.0
 #define NUM_MOTORS 3
-#define MIN_V 5.0
+#define MIN_V 4.9
 #define MAX_V 10.0
+
+#define PWMDIV 1.0
+#define WRAP 4095
 
 #define MIN_DUTY MIN_V / SUPPLY_V *WRAP
 #define MAX_DUTY SUPPLY_V > MAX_V ? (MAX_V / SUPPLY_V * WRAP) : WRAP
 
-#define P 0.5
+#define P 0.0
 #define I 0.0
+#define D -1
+
+#define A 0.1
+#define B 0.9
 
 struct repeating_timer timer1;
 float goal[3] = {4095 / 2, 4095 / 2, 4095 / 2};
@@ -35,9 +39,40 @@ int PIN_B[3] = {15, 18, 21};
 
 int read_pot(int i)
 {
+    static float reads[NUM_MOTORS] = {0, 0, 0};
     adc_select_input(POT[i]);
 
-    return adc_read();
+    reads[i] = reads[i] * A + adc_read() * B;
+
+    // if (i == 2)
+    // {
+    //     printf("in read %.4f %.4f %.4f\n", reads[0], reads[1], reads[2]);
+    // }
+    return reads[i];
+}
+
+void motor_duty(int motor, float duty)
+{
+    printf("duty %4f\n", duty);
+    if (duty > 0)
+    {
+        duty = duty * (MAX_DUTY - MIN_DUTY) + MIN_DUTY;
+        gpio_put(PIN_A[motor], 1);
+        gpio_put(PIN_B[motor], 0);
+        pwm_set_gpio_level(ENABLE[motor], duty);
+    }
+    else if (duty < 0)
+    {
+        duty = -duty * (MAX_DUTY - MIN_DUTY) + MIN_DUTY;
+        gpio_put(PIN_A[motor], 0);
+        gpio_put(PIN_B[motor], 1);
+        pwm_set_gpio_level(ENABLE[motor], duty);
+    }
+    else
+    {
+        // pwm_set_gpio_level(ENABLE[motor], 0);
+    }
+    printf("duty %4f\n", duty);
 }
 
 void position_pid(int motor, int desired)
@@ -45,9 +80,9 @@ void position_pid(int motor, int desired)
     int pos = read_pot(motor);
     int error = pos - desired;
     static float integral;
-    static int last_pos[NUM_MOTORS];
+    static int last_pos[NUM_MOTORS] = {0, 0, 0};
 
-    if (error < 50 && error > -50)
+    if (error < 0 && error > -0)
     {
         integral = 0;
         pwm_set_gpio_level(ENABLE[motor], 0);
@@ -58,28 +93,10 @@ void position_pid(int motor, int desired)
         integral += error;
         integral = integral > 4095 / 2 ? 4095 / 2 : integral;
 
-        float duty = P * error + I * integral;
-
+        float duty = P * error + I * integral + D * (pos - last_pos[motor]);
+        motor_duty(motor, duty);
         // printf("motor cur goal error duty %d %4d %4d %4d %4d %.4f\n", motor, pos, desired, error, desired, duty);
 
-        if (duty > 0)
-        {
-            duty = duty * (MAX_DUTY - MIN_DUTY) + MIN_DUTY;
-            gpio_put(PIN_A[motor], 1);
-            gpio_put(PIN_B[motor], 0);
-            pwm_set_gpio_level(ENABLE[motor], duty);
-        }
-        else if (duty < 0)
-        {
-            duty = -duty * (MAX_DUTY - MIN_DUTY) + MIN_DUTY;
-            gpio_put(PIN_A[motor], 0);
-            gpio_put(PIN_B[motor], 1);
-            pwm_set_gpio_level(ENABLE[motor], duty);
-        }
-        else
-        {
-            // pwm_set_gpio_level(ENABLE[motor], 0);
-        }
         // printf("%f\n", duty);
     }
     last_pos[motor] = pos;
@@ -119,21 +136,21 @@ int main()
     await_usb(1, true);
     init_motors();
     adc_init();
-    add_repeating_timer_ms(1, pid_callback, NULL, &timer1);
+    // add_repeating_timer_ms(1, pid_callback, NULL, &timer1);
     int step = 0;
     float change = .01;
 
     while (true)
     {
         step++;
-        if (step % 10 == 0)
-        {
-            for (int i = 0; i < NUM_MOTORS; i++)
-            {
-                goal[i] = sin(step * change + i * (2 * 3.14) / 3.0) * 1800 + 4095 / 2;
-            }
-        }
-        sleep_ms(1);
 
+        for (int i = 0; i < NUM_MOTORS; i++)
+        {
+            float sin_val = sin(step * change) ;
+            printf("sinval %f\n", sin_val);
+            motor_duty(i, sin_val/ (i+1));
+        }
+        printf("%d %d %d\n\n", read_pot(0), read_pot(1), read_pot(2));
+        sleep_ms(10);
     }
 }
