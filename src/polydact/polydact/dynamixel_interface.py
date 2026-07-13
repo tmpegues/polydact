@@ -331,7 +331,8 @@ class Motor:
         """Read the current position, velocity, and effort of the motor."""
         self.position = self.dyn.read_position(self.motor_id)
         self.velocity = self.dyn.read_velocity(self.motor_id)
-        self.effort = self.dyn.read_effort(self.motor_id)
+        effort = self.dyn.read_effort(self.motor_id)
+        self.effort = int.from_bytes(effort.to_bytes(2, signed=False), signed=True)
 
         self.dyn.node.get_logger().debug(f'Motor {self.motor_id} position {self.position}')
         self.dyn.node.get_logger().debug(f'Motor {self.motor_id} velocity  {self.velocity}')

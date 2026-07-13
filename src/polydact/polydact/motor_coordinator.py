@@ -131,6 +131,7 @@ class MotorCoordinator(Node):
             motor_states.position.append(motor.position)
             motor_states.velocity.append(motor.velocity)
             motor_states.effort.append(motor.effort)
+            self.get_logger().info(f'Current {motor.effort}')
 
         self.motor_states_pub.publish(motor_states)
 
