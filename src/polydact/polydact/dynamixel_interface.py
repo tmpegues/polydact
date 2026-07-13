@@ -244,6 +244,7 @@ class DynamixelInterface:
         current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
             self.port_handler, motor_id, ADDR_PRESENT_PWM
         )
+        current_effort = int.from_bytes(current_effort.to_bytes(2, signed=False), signed=True)
         self.node.get_logger().debug(f'DYN: Motor {motor_id} pwm {current_effort}')
 
         return current_effort
@@ -331,8 +332,7 @@ class Motor:
         """Read the current position, velocity, and effort of the motor."""
         self.position = self.dyn.read_position(self.motor_id)
         self.velocity = self.dyn.read_velocity(self.motor_id)
-        effort = self.dyn.read_effort(self.motor_id)
-        self.effort = int.from_bytes(effort.to_bytes(2, signed=False), signed=True)
+        self.effort = self.dyn.read_effort(self.motor_id)
 
         self.dyn.node.get_logger().debug(f'Motor {self.motor_id} position {self.position}')
         self.dyn.node.get_logger().debug(f'Motor {self.motor_id} velocity  {self.velocity}')
