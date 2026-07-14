@@ -6,7 +6,6 @@ from polydact_interfaces.msg import MotorGoal
 from polydact_interfaces.srv import Mode
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSDurabilityPolicy, QoSProfile
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 
@@ -46,28 +45,32 @@ class MotorCoordinator(Node):
         self.declare_parameter('Control_Mode', 1)
         self.mode = self.get_parameter('Control_Mode').value
 
+        self.declare_parameter('min_effort', 10)
+        min_effort = -1 * self.get_parameter('min_effort').value
+
         self.motors = {}
         for motor_id in self.motor_ids:
             self.motors.update({motor_id: Motor(self.dyn, motor_id)})
+            self.motors[motor_id].min_effort = min_effort
 
         # Motors should initialize off, but loop through just to be sure
         # Should probably ad a check to make sure they're actually all off
         for motor in self.motors.values():
             motor.set_off()
 
+        # It's nice to have a little wiggle room around the 0 point of the control device,
+        # especially when using the glove
+        self.deadzone = 0.01
+
         self.goal_sub = self.create_subscription(
             MotorGoal,
             'motor_goal',
-            self.set_single_goal,
-            QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
+            self.set_velocity_goal,
+            10,
         )
         self.mode_srv = self.create_service(Mode, 'set_mode', self.switch_mode_cb)
 
         self.motor_states_pub = self.create_publisher(JointState, 'motor_states', 10)
-
-        self.posi_pub = self.create_publisher(MotorGoal, 'cur_position', 10)
-        self.velo_pub = self.create_publisher(MotorGoal, 'cur_velocity', 10)
-        self.load_pub = self.create_publisher(MotorGoal, 'cur_load', 10)
 
         self.timer = self.create_timer(1 / 100, self.timer_callback)
         self.get_logger().info(f'motors: {self.motors.keys()}')
@@ -76,7 +79,7 @@ class MotorCoordinator(Node):
 
         self.get_logger().info('Motor Coordinator ready')
 
-    def set_single_goal(self, msg: MotorGoal):
+    def set_velocity_goal(self, msg: MotorGoal):
         """
         Set the position, velocity, or PWM goal for a single motor.
 
@@ -91,8 +94,7 @@ class MotorCoordinator(Node):
             self.get_logger().error(f'Unexpected motor id received: {msg}')
             return
 
-        deadzone = 0.3
-        self.motors[msg.motor_id].set_velocity(-1 * msg.goal, deadzone)
+        self.motors[msg.motor_id].velocity_goal = -1 * msg.goal
 
     def switch_mode_cb(self, request, response):
         """
@@ -131,7 +133,8 @@ class MotorCoordinator(Node):
             motor_states.position.append(motor.position)
             motor_states.velocity.append(motor.velocity)
             motor_states.effort.append(motor.effort)
-            self.get_logger().info(f'Current {motor.effort}')
+            self.get_logger().info(f'Current effort {motor.effort}')
+            motor.set_velocity(self.deadzone)
 
         self.motor_states_pub.publish(motor_states)
 

@@ -13,7 +13,7 @@
         <choice value="none"/>
     </arg>
     <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
-
+    <arg name="min_effort" default="10" description="int: If motors read a tension less than this value, they will tighten the tendon no matter what they're commanded."/>
 
     <node pkg="polydact" exec="serial_sensor_node" on_exit="shutdown" if="$(equals $(var sensor_source) serial)">
         <param name="serial_port" value="$(var serial_port)"/>
@@ -29,6 +29,7 @@
     <node pkg="polydact" exec="motor_coordinator" on_exit="shutdown" if="$(var motors)">
         <param name="motor_ids" value="$(var motor_ids)"/>
         <param name="control_mode" value="$(var control_mode)"/>
+        <param name="min_effort" value="$(var min_effort)"/>
     </node>
 
     <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown" args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml" if="$(var plotter)"/>

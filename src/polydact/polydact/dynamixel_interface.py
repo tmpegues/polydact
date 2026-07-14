@@ -95,11 +95,11 @@ class DynamixelInterface:
 
         match success:
             case True:
-                self.node.get_logger().debug(
+                self.node.get_logger().info(
                     f'Motor {motor_id}: Successfully set velocity goal to {goal}'
                 )
             case False:
-                self.node.get_logger().debug(
+                self.node.get_logger().info(
                     f'Motor {motor_id}: Failed to set velocity goal to {goal}'
                 )
 
@@ -268,32 +268,37 @@ class Motor:
         self.dyn = interface
         self.position = 0
         self.velocity = 0
+        self.velocity_goal = 0
         self.effort = 0
+        self.min_effort = 0
         # Initialize off
         self.dyn.send_on_off(self.motor_id, 0)
         self.active = 0
 
-    def set_velocity(self, goal: float, deadzone: float):
+    def set_velocity(self, deadzone: float):
         """Set this motor's velocity to the proportional goal received here."""
-        if abs(goal) > deadzone:
-            if goal > 0:
-                goal = (goal - deadzone) / (1 - deadzone)
-            if goal < 0:
-                goal = (goal + deadzone) / (1 - deadzone)
+        self.dyn.node.get_logger().info(
+            f'Motor {self.motor_id}: Velocity goal {self.velocity_goal} deadzone {deadzone}'
+        )
+
+        if abs(self.velocity_goal) > deadzone:
+            if self.velocity_goal > 0:
+                self.dyn.node.get_logger().info('1')
+                goal = (self.velocity_goal - deadzone) / (1 - deadzone)
+            if self.velocity_goal < 0:
+                self.dyn.node.get_logger().info('2')
+                goal = (self.velocity_goal + deadzone) / (1 - deadzone)
             goal = int(goal**3 * 300)
         else:
             goal = 0
-        success = self.dyn.send_velocity(self.motor_id, goal)
 
-        match success:
-            case True:
-                self.dyn.node.get_logger().debug(
-                    f'Motor {self.motor_id}: Successfully set {self.mode} goal to {goal}'
-                )
-            case False:
-                self.dyn.node.get_logger().debug(
-                    f'Motor {self.motor_id}: Failed to set {self.mode} goal to {goal}'
-                )
+        # If effort is too low, override the requested velocity to
+        # ensure that we keep a constant tension
+
+        if goal >= 0 and self.effort > self.min_effort:
+            goal = -100
+            self.dyn.node.get_logger().info('Loose')
+        self.dyn.send_velocity(self.motor_id, goal)
 
     def set_off(self):
         """
@@ -330,8 +335,8 @@ class Motor:
 
     def get_state(self):
         """Read the current position, velocity, and effort of the motor."""
-        self.position = self.dyn.read_position(self.motor_id)
-        self.velocity = self.dyn.read_velocity(self.motor_id)
+        # self.position = self.dyn.read_position(self.motor_id)
+        # self.velocity = self.dyn.read_velocity(self.motor_id)
         self.effort = self.dyn.read_effort(self.motor_id)
 
         self.dyn.node.get_logger().debug(f'Motor {self.motor_id} position {self.position}')
