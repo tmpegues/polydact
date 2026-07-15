@@ -22,7 +22,7 @@ ADDR_PRESENT_VELOCITY = 128
 PROTOCOL_VERSION = 2.0  # Default Protocol version of DYNAMIXEL X series.
 
 # Default settings
-BAUDRATE = 57600  # Dynamixel default baudrate : 57600
+BAUDRATE = 1000000  # Dynamixel default baudrate : 57600
 DEVICE_NAME = '/dev/ttyUSB0'  # Check which port is being used on your controller
 
 TORQUE_ENABLE = 1  # Value for enabling the torque
@@ -60,9 +60,9 @@ class DynamixelInterface:
                     throttle_duration_sec=1,
                 )
 
-        if not self.port_handler.setBaudRate(BAUDRATE):
+        while not self.port_handler.setBaudRate(BAUDRATE):
             self.node.get_logger().error('Dyn: Could not set baudrate')
-            return
+
         self.node.get_logger().debug('Dyn: Baudrate set')
 
         self.addresses = {
@@ -240,10 +240,10 @@ class DynamixelInterface:
             self.node.get_logger().error(
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
-        self.node.get_logger().debug(f'DYN: Motor {motor_id} current {current_effort}')
-        current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, motor_id, ADDR_PRESENT_PWM
-        )
+        # self.node.get_logger().debug(f'DYN: Motor {motor_id} current {current_effort}')
+        # current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
+        #     self.port_handler, motor_id, ADDR_PRESENT_PWM
+        # )
         current_effort = int.from_bytes(current_effort.to_bytes(2, signed=False), signed=True)
         self.node.get_logger().debug(f'DYN: Motor {motor_id} pwm {current_effort}')
 
@@ -277,10 +277,6 @@ class Motor:
 
     def set_velocity(self, deadzone: float):
         """Set this motor's velocity to the proportional goal received here."""
-        self.dyn.node.get_logger().info(
-            f'Motor {self.motor_id}: Velocity goal {self.velocity_goal} deadzone {deadzone}'
-        )
-
         if abs(self.velocity_goal) > deadzone:
             if self.velocity_goal > 0:
                 self.dyn.node.get_logger().info('1')
@@ -296,8 +292,7 @@ class Motor:
         # ensure that we keep a constant tension
 
         if goal >= 0 and self.effort > self.min_effort:
-            goal = -100
-            self.dyn.node.get_logger().info('Loose')
+            goal = -300
         self.dyn.send_velocity(self.motor_id, goal)
 
     def set_off(self):
@@ -335,8 +330,8 @@ class Motor:
 
     def get_state(self):
         """Read the current position, velocity, and effort of the motor."""
-        # self.position = self.dyn.read_position(self.motor_id)
-        # self.velocity = self.dyn.read_velocity(self.motor_id)
+        self.position = self.dyn.read_position(self.motor_id)
+        self.velocity = self.dyn.read_velocity(self.motor_id)
         self.effort = self.dyn.read_effort(self.motor_id)
 
         self.dyn.node.get_logger().debug(f'Motor {self.motor_id} position {self.position}')

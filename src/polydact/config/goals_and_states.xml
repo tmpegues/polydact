@@ -4,25 +4,47 @@
   <Tab containers="1" tab_name="tab1">
    <Container>
     <DockSplitter orientation="-" sizes="1" count="1">
-     <DockSplitter orientation="|" sizes="0.502678;0.497322" count="2">
-      <DockArea name="Finger Positions">
-       <plot style="Lines" mode="TimeSeries" flip_y="false" flip_x="false">
-        <range right="22.930230" left="17.944424" bottom="-0.100000" top="0.100000"/>
-        <limitY/>
-        <curve name="Finger 1" color="#ff0000"/>
-        <curve name="Finger 2" color="#00ff00"/>
-        <curve name="Finger 3" color="#0000ff"/>
-       </plot>
-      </DockArea>
-      <DockArea name="Actual Efforts">
-       <plot style="Lines" mode="TimeSeries" flip_y="false" flip_x="false">
-        <range right="25.010367" left="20.046992" bottom="-26.400000" top="-9.600000"/>
-        <limitY/>
-        <curve name="/motor_states/1/effort" color="#ff0000"/>
-        <curve name="/motor_states/2/effort" color="#00ff00"/>
-        <curve name="/motor_states/3/effort" color="#0000ff"/>
-       </plot>
-      </DockArea>
+     <DockSplitter orientation="|" sizes="0.50229;0.49771" count="2">
+      <DockSplitter orientation="-" sizes="0.501006;0.498994" count="2">
+       <DockArea name="Finger Positions">
+        <plot style="Lines" mode="TimeSeries" flip_x="false" flip_y="false">
+         <range top="0.100000" bottom="-0.100000" left="4.210050" right="9.117097"/>
+         <limitY/>
+         <curve name="Finger 1" color="#ff0000"/>
+         <curve name="Finger 2" color="#00ff00"/>
+         <curve name="Finger 3" color="#0000ff"/>
+        </plot>
+       </DockArea>
+       <DockArea name="Actual Velocities">
+        <plot style="Lines" mode="TimeSeries" flip_x="false" flip_y="false">
+         <range top="0.100000" bottom="-0.100000" left="4.817563" right="9.795397"/>
+         <limitY/>
+         <curve name="/motor_states/1/velocity" color="#ff0000"/>
+         <curve name="/motor_states/2/velocity" color="#00ff00"/>
+         <curve name="/motor_states/3/velocity" color="#0000ff"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
+      <DockSplitter orientation="-" sizes="0.501006;0.498994" count="2">
+       <DockArea name="Actual Efforts">
+        <plot style="Lines" mode="TimeSeries" flip_x="false" flip_y="false">
+         <range top="-39.700000" bottom="-136.300000" left="4.817563" right="9.795397"/>
+         <limitY/>
+         <curve name="/motor_states/1/effort" color="#ff0000"/>
+         <curve name="/motor_states/2/effort" color="#00ff00"/>
+         <curve name="/motor_states/3/effort" color="#0000ff"/>
+        </plot>
+       </DockArea>
+       <DockArea name="Actual Positions">
+        <plot style="Lines" mode="TimeSeries" flip_x="false" flip_y="false">
+         <range top="4402341384.200000" bottom="-107372336.200000" left="4.817563" right="9.795397"/>
+         <limitY/>
+         <curve name="/motor_states/1/position" color="#ff0000"/>
+         <curve name="/motor_states/2/position" color="#00ff00"/>
+         <curve name="/motor_states/3/position" color="#0000ff"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
      </DockSplitter>
     </DockSplitter>
    </Container>
@@ -34,7 +56,7 @@
  <!-- - - - - - - - - - - - - - - -->
  <Plugins>
   <plugin ID="DataLoad CSV">
-   <parameters delimiter="0" time_axis=""/>
+   <parameters time_axis="" delimiter="0"/>
   </plugin>
   <plugin ID="DataLoad MCAP"/>
   <plugin ID="DataLoad ROS2 bags">
@@ -52,7 +74,7 @@
    <max_array_size value="100"/>
    <boolean_strings_to_number value="true"/>
    <remove_suffix_from_strings value="true"/>
-   <selected_topics value="/rosout;/parameter_events;/motor_goal;/motor_states"/>
+   <selected_topics value="/parameter_events;/rosout;/motor_goal;/motor_states"/>
   </plugin>
   <plugin ID="UDP Server"/>
   <plugin ID="WebSocket Server"/>
@@ -71,9 +93,45 @@
  <previouslyLoaded_Streamer name="ROS2 Topic Subscriber"/>
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
-  <snippet name="Finger 3">
+  <snippet name="Finger_1">
+   <global></global>
+   <function>if (v1 == 1) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/motor_id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger_2">
+   <global></global>
+   <function>if (v1 == 2) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger_3">
    <global></global>
    <function>if (v1 == 3) then
+    return time, value
+else
+    return {}
+end</function>
+   <linked_source>/motor_goal/state</linked_source>
+   <additional_sources>
+    <v1>/motor_goal/id</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="Finger 1">
+   <global></global>
+   <function>if (v1 == 1) then
     return time, value
 else
     return {}
@@ -95,50 +153,14 @@ end</function>
     <v1>/motor_goal/motor_id</v1>
    </additional_sources>
   </snippet>
-  <snippet name="Finger 1">
-   <global></global>
-   <function>if (v1 == 1) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/goal</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/motor_id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger_3">
+  <snippet name="Finger 3">
    <global></global>
    <function>if (v1 == 3) then
     return time, value
 else
     return {}
 end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger_2">
-   <global></global>
-   <function>if (v1 == 2) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
-   <additional_sources>
-    <v1>/motor_goal/id</v1>
-   </additional_sources>
-  </snippet>
-  <snippet name="Finger_1">
-   <global></global>
-   <function>if (v1 == 1) then
-    return time, value
-else
-    return {}
-end</function>
-   <linked_source>/motor_goal/state</linked_source>
+   <linked_source>/motor_goal/goal</linked_source>
    <additional_sources>
     <v1>/motor_goal/motor_id</v1>
    </additional_sources>
