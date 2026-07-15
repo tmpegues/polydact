@@ -69,7 +69,9 @@ class MotorCoordinator(Node):
         self.velo_pub = self.create_publisher(MotorGoal, 'cur_velocity', 10)
         self.load_pub = self.create_publisher(MotorGoal, 'cur_load', 10)
 
-        self.timer = self.create_timer(1 / 100, self.timer_callback)
+        # State reads are blocking serial round-trips; at 100 Hz they saturate the
+        # bus and starve the command path. 20 Hz is plenty for telemetry.
+        self.timer = self.create_timer(1 / 20, self.timer_callback)
         self.get_logger().info(f'motors: {self.motors.keys()}')
         for motor in self.motors.values():
             motor.set_mode(1)

@@ -241,10 +241,6 @@ class DynamixelInterface:
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
         self.node.get_logger().debug(f'DYN: Motor {motor_id} current {current_effort}')
-        current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, motor_id, ADDR_PRESENT_PWM
-        )
-        self.node.get_logger().debug(f'DYN: Motor {motor_id} pwm {current_effort}')
 
         return current_effort
 
