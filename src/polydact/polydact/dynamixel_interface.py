@@ -22,7 +22,7 @@ ADDR_PRESENT_VELOCITY = 128
 PROTOCOL_VERSION = 2.0  # Default Protocol version of DYNAMIXEL X series.
 
 # Default settings
-BAUDRATE = 57600  # Dynamixel default baudrate : 57600
+BAUDRATE = 1000000  # Motors are configured for 1 Mbps
 DEVICE_NAME = '/dev/ttyUSB0'  # Check which port is being used on your controller
 
 TORQUE_ENABLE = 1  # Value for enabling the torque
@@ -241,10 +241,6 @@ class DynamixelInterface:
                 f'Load Error: {self.packet_handler.getRxPacketError(dxl_error)}'
             )
         self.node.get_logger().debug(f'DYN: Motor {motor_id} current {current_effort}')
-        current_effort, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(
-            self.port_handler, motor_id, ADDR_PRESENT_PWM
-        )
-        self.node.get_logger().debug(f'DYN: Motor {motor_id} pwm {current_effort}')
 
         return current_effort
 
