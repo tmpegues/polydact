@@ -64,7 +64,7 @@ class SerialReader(Node):
 
         self.reading_timer = self.create_timer(1 / read_freq, self.reading_timer_callback)
         self.publishing_timer = self.create_timer(
-            int(1 / self.pub_freq), self.publishing_timer_callback
+            1 / self.pub_freq, self.publishing_timer_callback
         )
         self.get_logger().info('Serial Reader fully initialized')
 
