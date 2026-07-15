@@ -12,6 +12,7 @@ ADDR_OPERATING_MODE = 11  # Control table address is different in Dynamixel mode
 ADDR_TORQUE_ENABLE = 64
 ADDR_GOAL_POSITION = 116
 ADDR_GOAL_VELOCITY = 104
+ADDR_PROFILE_ACCELERATION = 108
 ADDR_PRESENT_POSITION = 132
 ADDR_PRESENT_PWM = 124
 ADDR_PRESENT_CURRENT = 126
@@ -27,6 +28,11 @@ DEVICE_NAME = '/dev/ttyUSB0'  # Check which port is being used on your controlle
 
 TORQUE_ENABLE = 1  # Value for enabling the torque
 TORQUE_DISABLE = 0  # Value for disabling the torque
+
+# Velocity-profile acceleration ramp. 0 = instant (motor slams to goal velocity),
+# which is what makes the tendon impact the load on initial tension. A finite value
+# ramps the velocity so it eases into tension. Lower = softer, tune on the rig.
+PROFILE_ACCELERATION = 20
 
 
 class DynamixelInterface:
@@ -154,6 +160,26 @@ class DynamixelInterface:
             success = True
             self.node.get_logger().debug(f'Succeeded to set Control Mode {mode}.')
         return success
+
+    def send_profile_acceleration(self, motor_id: int, accel: int) -> bool:
+        """Set the velocity-profile acceleration so the motor ramps instead of stepping."""
+        dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
+            self.port_handler, motor_id, ADDR_PROFILE_ACCELERATION, accel
+        )
+        if dxl_comm_result != COMM_SUCCESS:
+            self.node.get_logger().error(
+                f'Failed to set Profile Acceleration: '
+                f'{self.packet_handler.getTxRxResult(dxl_comm_result)}'
+            )
+            return False
+        elif dxl_error != 0:
+            self.node.get_logger().error(
+                f'Failed to set Profile Acceleration: '
+                f'{self.packet_handler.getRxPacketError(dxl_error)}'
+            )
+            return False
+        self.node.get_logger().debug(f'Motor {motor_id}: profile acceleration set to {accel}')
+        return True
 
     def read_position(self, motor_id: int) -> int:
         """
@@ -319,6 +345,9 @@ class Motor:
         # Change the control mode
         if success and mode != 0:
             success = self.dyn.send_mode(self.motor_id, mode)
+        # Ramp velocity changes so the tendon eases into tension instead of slamming it
+        if success and mode == 1:
+            self.dyn.send_profile_acceleration(self.motor_id, PROFILE_ACCELERATION)
         # Turn torque back on and change state if mode was successfully changed
         if success and mode != 0:
             self.mode = mode
