@@ -95,11 +95,11 @@ class DynamixelInterface:
 
         match success:
             case True:
-                self.node.get_logger().info(
+                self.node.get_logger().debug(
                     f'Motor {motor_id}: Successfully set velocity goal to {goal}'
                 )
             case False:
-                self.node.get_logger().info(
+                self.node.get_logger().debug(
                     f'Motor {motor_id}: Failed to set velocity goal to {goal}'
                 )
 
@@ -279,10 +279,8 @@ class Motor:
         """Set this motor's velocity to the proportional goal received here."""
         if abs(self.velocity_goal) > deadzone:
             if self.velocity_goal > 0:
-                self.dyn.node.get_logger().info('1')
                 goal = (self.velocity_goal - deadzone) / (1 - deadzone)
             if self.velocity_goal < 0:
-                self.dyn.node.get_logger().info('2')
                 goal = (self.velocity_goal + deadzone) / (1 - deadzone)
             goal = int(goal**3 * 300)
         else:
