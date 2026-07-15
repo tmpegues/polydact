@@ -72,7 +72,7 @@ class MotorCoordinator(Node):
 
         self.motor_states_pub = self.create_publisher(JointState, 'motor_states', 10)
 
-        self.timer = self.create_timer(1 / 100, self.timer_callback)
+        self.timer = self.create_timer(1 / 20, self.timer_callback)
         self.get_logger().info(f'motors: {self.motors.keys()}')
         for motor in self.motors.values():
             motor.set_mode(1)
