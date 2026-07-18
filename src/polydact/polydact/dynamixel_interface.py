@@ -275,7 +275,7 @@ class Motor:
         # Initialize off
         self.dyn.send_on_off(self.motor_id, 0)
         self.active = 0
-        self.max_speed = self.max_speed
+        self.max_speed = max_speed
 
     def set_velocity(self, deadzone: float):
         """Set this motor's velocity to the proportional goal received here."""
