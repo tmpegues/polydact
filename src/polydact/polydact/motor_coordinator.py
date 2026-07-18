@@ -48,9 +48,12 @@ class MotorCoordinator(Node):
         self.declare_parameter('min_effort', 10)
         min_effort = -1 * self.get_parameter('min_effort').value
 
+        self.declare_parameter('max_speed', 150)
+        max_speed = self.get_parameter('max_speed').value
+
         self.motors = {}
         for motor_id in self.motor_ids:
-            self.motors.update({motor_id: Motor(self.dyn, motor_id)})
+            self.motors.update({motor_id: Motor(self.dyn, motor_id, max_speed)})
             self.motors[motor_id].min_effort = min_effort
 
         # Motors should initialize off, but loop through just to be sure
@@ -60,7 +63,8 @@ class MotorCoordinator(Node):
 
         # It's nice to have a little wiggle room around the 0 point of the control device,
         # especially when using the glove
-        self.deadzone = 0.01
+        self.declare_parameter('deadzone', 0.3)
+        self.deadzone = self.get_parameter('deadzone').value
 
         self.goal_sub = self.create_subscription(
             MotorGoal,
@@ -72,7 +76,7 @@ class MotorCoordinator(Node):
 
         self.motor_states_pub = self.create_publisher(JointState, 'motor_states', 10)
 
-        self.timer = self.create_timer(1 / 20, self.timer_callback)
+        self.timer = self.create_timer(1 / 100, self.timer_callback)
         self.get_logger().info(f'motors: {self.motors.keys()}')
         for motor in self.motors.values():
             motor.set_mode(1)

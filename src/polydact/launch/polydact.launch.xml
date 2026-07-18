@@ -14,6 +14,9 @@
     </arg>
     <arg name="serial_port" default="'/dev/ttyACM0'" description="str: Which port is the serial device on?"/>
     <arg name="min_effort" default="10" description="int: If motors read a tension less than this value, they will tighten the tendon no matter what they're commanded."/>
+    <arg name="deadzone" default=".3" description="Provide a deadzone  between 0-1 around the 0% position of the sensor so that the motors don't start moving without a deliberate motion."/>
+    <arg name="max_speed" default="200" description="Motor speed is set to a value between +- 1023. That's really fast for this application. Set a max speed that's lower./">
+
 
     <node pkg="polydact" exec="serial_sensor_node" on_exit="shutdown" if="$(equals $(var sensor_source) serial)">
         <param name="serial_port" value="$(var serial_port)"/>
@@ -30,6 +33,8 @@
         <param name="motor_ids" value="$(var motor_ids)"/>
         <param name="control_mode" value="$(var control_mode)"/>
         <param name="min_effort" value="$(var min_effort)"/>
+        <param name="deadzone" value="$(var deadzone)"/>
+        <param name="max_speed" value="$(var max_speed)/">
     </node>
 
     <node pkg="plotjuggler" exec="plotjuggler"  on_exit="shutdown" args="-nl $(find-pkg-share polydact)/config/goals_and_states.xml" if="$(var plotter)"/>

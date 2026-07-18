@@ -253,7 +253,7 @@ class DynamixelInterface:
 class Motor:
     """Polydact motor class using Dynmaixel SDK."""
 
-    def __init__(self, interface: DynamixelInterface, motor_id: int):
+    def __init__(self, interface: DynamixelInterface, motor_id: int, max_speed):
         """
         Initialize a single motor.
 
@@ -262,6 +262,7 @@ class Motor:
         interface (DynamixelInterface): Contains the port and packet handler that will control this
                                         motor.
         motor_id (int): The Dynamixel motor ID.
+        max_speed: Max speed for the motor.
 
         """
         self.motor_id = motor_id
@@ -274,6 +275,7 @@ class Motor:
         # Initialize off
         self.dyn.send_on_off(self.motor_id, 0)
         self.active = 0
+        self.max_speed = self.max_speed
 
     def set_velocity(self, deadzone: float):
         """Set this motor's velocity to the proportional goal received here."""
