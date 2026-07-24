@@ -291,8 +291,8 @@ class Motor:
         # If effort is too low, override the requested velocity to
         # ensure that we keep a constant tension
 
-        if self.min_effort > 0 and goal >= 0 and self.effort > self.min_effort:
-            goal = -300
+        # if self.min_effort > 0 and goal >= 0 and self.effort > self.min_effort:
+        #     goal = -300
         self.dyn.send_velocity(self.motor_id, goal)
 
     def set_off(self):
